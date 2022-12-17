@@ -1,4 +1,4 @@
-# Vandal (Working Title) Backend
+# Vandal {working title} Backend
 Python API Service
 
 ## Installation
