@@ -25,3 +25,8 @@ Running in development on localhost
 ```
 uvicorn app.main:api --reload
 ```
+
+## Troubleshooting
+```
+pip3 freeze > requirements.txt
+```
