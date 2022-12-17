@@ -27,6 +27,7 @@ uvicorn app.main:api --reload
 ```
 
 ## Troubleshooting
+Update requirements file when insalling new packages
 ```
 pip3 freeze > requirements.txt
 ```
