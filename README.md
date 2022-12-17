@@ -23,5 +23,5 @@ pip3 install -r requirements.txt
 Running in development on localhost
 
 ```
-uvicorn app.main:app --reload
+uvicorn api.main:api --reload
 ```
