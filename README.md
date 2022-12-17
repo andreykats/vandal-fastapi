@@ -21,7 +21,7 @@ pip3 install -r requirements.txt
 
 ## Running
 Running in development on localhost:
-* usage: `uvicorn project_dir.project_file.fastapi_instance --reload`
+usage: `uvicorn project_dir.project_file.fastapi_instance --reload`
 
 ```
 uvicorn app.main:api --reload
