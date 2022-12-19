@@ -1,6 +1,12 @@
 # Vandal {working title} Backend
 Python API Service
 
+## Requirements
+
+Python 3.11
+
+https://www.python.org/downloads/
+
 ## Installation
 
 ```
