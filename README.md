@@ -35,8 +35,8 @@ Usage:
 uvicorn app.main:api --reload
 ```
 
-## Troubleshooting
-Update requirements file when insalling new packages:
+## Admin
+Update requirements file when installing new packages:
 ```
 pip3 freeze > requirements.txt
 ```
