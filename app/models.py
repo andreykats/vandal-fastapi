@@ -8,10 +8,10 @@ class Item(Base):
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True, index=True)
-    parent_id = Column(Integer, index=True)
     name = Column(String, index=True)
     url = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
+    parent_id = Column(Integer)
 
     owner = relationship("User", back_populates="items")
 

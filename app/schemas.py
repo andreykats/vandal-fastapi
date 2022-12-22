@@ -1,9 +1,12 @@
 from pydantic import BaseModel
+from pydantic.schema import Optional
 
 
 class ItemBase(BaseModel):
     name: str
     url: str
+    parent_id: Optional[int]
+    owner_id: int
 
 
 class ItemCreate(ItemBase):
@@ -12,8 +15,6 @@ class ItemCreate(ItemBase):
 
 class Item(ItemBase):
     id: int
-    parent_id: int
-    owner_id: int
 
     class Config:
         orm_mode = True

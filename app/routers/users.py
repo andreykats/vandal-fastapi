@@ -30,8 +30,3 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
-
-
-@router.post("/{user_id}/art/", response_model=schemas.Item)
-def create_item_for_user(user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)):
-    return crud.create_user_item(db=db, item=item, user_id=user_id)
