@@ -78,6 +78,11 @@ def upload_image_layer(filedata: str = Form(...), filename: str = Form(...), par
     # Decode base64string back to image
     img = base64.b64decode(image_as_bytes)
 
+    if parentname == "_":
+        with open("./images/" + filename, "wb") as f:
+            f.write(img)
+            return {"filename": filename}
+
     # Read background image from file into PIL
     background = Image.open("./images/" + parentname + ".jpg")
 

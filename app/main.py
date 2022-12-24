@@ -43,6 +43,13 @@ api.add_middleware(
 api.include_router(users.router)
 api.include_router(art.router)
 api.mount("/images", StaticFiles(directory="images"), name="images")
+# api.mount("/", StaticFiles(directory="backend/ui/"), name="ui")
+# api.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# @api.get("/")
+# async def index():
+#     return RedirectResponse(url="/index.html")
 
 
 @api.get("/")
