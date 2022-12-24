@@ -32,7 +32,7 @@ Usage:
 `uvicorn project_dir.project_file.fastapi_instance --reload`
 
 ```
-uvicorn app.main:api --reload
+uvicorn app.main:api --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Admin
