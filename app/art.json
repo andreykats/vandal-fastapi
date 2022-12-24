@@ -2,16 +2,31 @@
     {
         "name": "The Thunder Shower",
         "owner_id": 1,
-        "base_layer_id": null
+        "base_layer_id": 1
     },
     {
         "name": "Naked Ladies",
         "owner_id": 1,
-        "base_layer_id": null
+        "base_layer_id": 2
     },
     {
         "name": "The Bedroom",
         "owner_id": 1,
-        "base_layer_id": null
+        "base_layer_id": 3
+    },
+    {
+        "name": "Mona Lisa",
+        "owner_id": 1,
+        "base_layer_id": 4
+    },
+    {
+        "name": "The Scream",
+        "owner_id": 1,
+        "base_layer_id": 5
+    },
+    {
+        "name": "Self Portrait",
+        "owner_id": 1,
+        "base_layer_id": 6
     }
 ]
