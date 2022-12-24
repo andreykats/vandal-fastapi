@@ -5,6 +5,7 @@ from . import models
 from .routers import art, users
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+import uvicorn
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -47,3 +48,6 @@ api.mount("/images", StaticFiles(directory="images"), name="images")
 @api.get("/")
 async def redirect():
     return RedirectResponse("/docs")
+
+if __name__ == "__main__":
+    uvicorn.run(api, host="0.0.0.0", port=8000)

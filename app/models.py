@@ -11,7 +11,8 @@ class Item(Base):
     name = Column(String, index=True)
     url = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    parent_id = Column(Integer)
+    top_layer_id = Column(Integer)
+    base_layer_id = Column(Integer, index=True)
 
     owner = relationship("User", back_populates="items")
 
