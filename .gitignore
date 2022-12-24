@@ -11,7 +11,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-images/
+# images/
 eggs/
 .eggs/
 lib/
@@ -27,4 +27,4 @@ share/python-wheels/
 MANIFEST
 
 # Database
-*.db
+# *.db
