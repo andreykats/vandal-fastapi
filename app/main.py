@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .database import engine
 from . import models
 from .routers import art, users
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-import uvicorn
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -42,19 +42,10 @@ api.add_middleware(
 
 api.include_router(users.router)
 api.include_router(art.router)
-api.mount("/images", StaticFiles(directory="images"), name="images")
-# api.mount("/", StaticFiles(directory="backend/ui/"), name="ui")
-# api.mount("/static", StaticFiles(directory="static"), name="static")
 
+api.mount("/images", StaticFiles(directory="images/"), name="images")
+api.mount("/", StaticFiles(directory="build/", html=True), name="build")
 
 # @api.get("/")
-# async def index():
-#     return RedirectResponse(url="/index.html")
-
-
-@api.get("/")
-async def redirect():
-    return RedirectResponse("/docs")
-
-if __name__ == "__main__":
-    uvicorn.run(api, host="0.0.0.0", port=8000)
+# async def redirect():
+#     return RedirectResponse("/docs")
