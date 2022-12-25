@@ -22,6 +22,16 @@ def get_all_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     return items
 
 
+@router.post("/", response_model=list[schemas.Item])
+def create_items(items: list[schemas.ItemCreate], db: Session = Depends(get_db)):
+    item_list = []
+    for x in items:
+        item = crud.create_item(db=db, item=x)
+        item_list.append(item)
+
+    return item_list
+
+
 @router.get("/{item_id}", response_model=schemas.Item)
 def get_item(item_id: int, db: Session = Depends(get_db)):
     item = crud.get_item(db, item_id=item_id)
@@ -119,13 +129,3 @@ async def create_and_upload_a_new_item(name: str = Form(...), user_id: int = For
         shutil.copyfileobj(image.file, buffer)
 
     return item
-
-
-@router.post("/import", response_model=list[schemas.Item])
-def create_new_items(items: list[schemas.ItemCreate], db: Session = Depends(get_db)):
-    item_list = []
-    for x in items:
-        item = crud.create_item(db=db, item=x)
-        item_list.append(item)
-
-    return item_list
