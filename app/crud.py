@@ -1,10 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from . import models, schemas
-# import numpy as np
-# from database import engine
 
-# session = Session(engine, future=True)
+import os
 
 
 def get_user(db: Session, user_id: int):
@@ -73,19 +71,22 @@ def create_item(db: Session, item: schemas.ItemCreate):
     return db_item
 
 
-def delete_item(db: Session, item_id: int):
+def delete_user_content(db: Session, item_id: int):
     db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     db.delete(db_item)
     db.commit()
+    os.remove("./images/" + str(db_item.id) + ".jpg")
 
-    return {"status": "done"}
+    return db_item
 
-# def create_item_bulk(db: Session, items: list[schemas.ItemCreate]):
-#     created = []
-#     for item in items:
-#         db_item = models.Item(**item.dict())
-#         db.add(db_item)
-#         db.commit()
-#         db.refresh(db_item)
-#         created.append(db_item)
-#     return created
+
+def delete_all_user_content(db: Session):
+    db_item = db.query(models.Item).filter(models.Item.owner_id != 1).all()
+    count = 0
+    for item in db_item:
+        db.delete(item)
+        os.remove("./images/" + str(item.id) + ".jpg")
+        count += 1
+    db.commit()
+
+    return {"deleted": count}

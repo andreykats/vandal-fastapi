@@ -1,7 +1,6 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-
-from .database import Base
+from .database import Base, engine
 
 
 class Item(Base):
@@ -9,9 +8,7 @@ class Item(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    url = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    top_layer_id = Column(Integer)
     base_layer_id = Column(Integer, index=True)
 
     owner = relationship("User", back_populates="items")
@@ -26,3 +23,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     items = relationship("Item", back_populates="owner")
+
+
+# Run database migration
+Base.metadata.create_all(bind=engine)

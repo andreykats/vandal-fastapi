@@ -1,28 +1,13 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .database import engine
-from . import models
-from .routers import art, users
+from .routers import admin, art, users
 
-
-models.Base.metadata.create_all(bind=engine)
 
 description = """
-FastAPI based backend providing a REST API 🚀
+### FastAPI based backend providing a REST API 🚀
 
-## Users
-
-You will be able to:
-
-* **Create users** (_not implemented_).
-* **Read users** (_not implemented_).
-
-## Items
-
-You can **read items**.
-
+Authentication not yet implemented
 """
 
 api = FastAPI(
@@ -40,8 +25,11 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
-api.include_router(users.router)
+
 api.include_router(art.router)
+api.include_router(users.router)
+api.include_router(admin.router)
+
 
 api.mount("/images", StaticFiles(directory="images/"), name="images")
 api.mount("/", StaticFiles(directory="build/", html=True), name="build")
