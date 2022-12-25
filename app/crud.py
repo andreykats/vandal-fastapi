@@ -2,8 +2,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from . import models, schemas
 
-import os
-
 
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -71,22 +69,16 @@ def create_item(db: Session, item: schemas.ItemCreate):
     return db_item
 
 
-def delete_user_content(db: Session, item_id: int):
+def delete_user_item(db: Session, item_id: int):
     db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     db.delete(db_item)
     db.commit()
-    os.remove("./images/" + str(db_item.id) + ".jpg")
-
     return db_item
 
 
-def delete_all_user_content(db: Session):
+def delete_all_user_items(db: Session):
     db_item = db.query(models.Item).filter(models.Item.owner_id != 1).all()
-    count = 0
     for item in db_item:
         db.delete(item)
-        os.remove("./images/" + str(item.id) + ".jpg")
-        count += 1
     db.commit()
-
-    return {"deleted": count}
+    return db_item
