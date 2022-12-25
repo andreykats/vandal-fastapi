@@ -1,19 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from .routers import admin, art, users
 from typing import Callable
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
 
-Authentication not yet implemented
+### To Do:
+* **Set up JWT based authentication**.
+* **Switch database from SQLite to PostgreSQL**.
 """
 
 api = FastAPI(
     title="Vandal REST API",
     description=description,
-    version="0.0.1"
+    version="0.0.2"
 )
 origins = ["*"]
 
@@ -32,11 +35,12 @@ api.include_router(admin.router)
 
 
 api.mount("/images", StaticFiles(directory="images/"), name="images")
-api.mount("/", StaticFiles(directory="build/", html=True), name="build")
+# api.mount("/", StaticFiles(directory="build/", html=True), name="build")
 
-# @api.get("/")
-# async def redirect():
-#     return RedirectResponse("/docs")
+
+@api.get("/")
+async def redirect():
+    return RedirectResponse("/docs")
 
 
 def update_schema_name(app: FastAPI, function: Callable, name: str) -> None:
