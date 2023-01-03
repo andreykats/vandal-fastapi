@@ -1,18 +1,25 @@
 from fastapi import APIRouter, Depends, Form, File, UploadFile
+from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
 from ..dependencies import get_db
-from .. import crud, schemas
+from . import crud, schemas
 import base64
 import shutil
-
+import os
 
 from PIL import Image
 import io
 
 
+# Clean up verbose function names in Client Generator
+def generate_unique_id(route: APIRoute):
+    return f"{route.tags[0]}-{route.name}"
+
+
 router = APIRouter(
     prefix="/art",
-    tags=["art"]
+    tags=["art"],
+    generate_unique_id_function=generate_unique_id
 )
 
 
@@ -53,25 +60,37 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 '''
 
 
-@router.post("/submit", response_model=schemas.Item)
-def create_modified_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
-    parent_item = crud.get_item(db, item_id=item_id)
+@router.post("/upload", response_model=schemas.Item)
+async def create_base_item(name: str = Form(...), user_id: int = Form(...), image: UploadFile = File(...), db: Session = Depends(get_db)):
+    print({"filename": image.filename})
+    db_item = schemas.ItemCreate(name=name, owner_id=user_id)
+    item = crud.create_item(db=db, item=db_item)
 
-    child_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id)
-    child_item = crud.create_item(db=db, item=child_item)
+    filename = str(item.id) + ".jpg"
+    with open("./images/" + filename, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+
+    return item
+
+
+@router.post("/submit", response_model=schemas.Item)
+def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
+    parent_item = crud.get_item(db, item_id=item_id)
+    db_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id)
+    item = crud.create_item(db=db, item=db_item)
 
     # Convert string to bytes
     image_as_bytes = str.encode(image_data)
 
     # Decode base64string back to image
     img = base64.b64decode(image_as_bytes)
-    file_name = str(child_item.id) + ".jpg"
+    file_name = str(item.id) + ".jpg"
 
     # If the image from parent item is actially the base art image then skip the blending step and just save it to file.
     if parent_item.id == parent_item.base_layer_id:
         with open("./images/" + file_name, "wb") as buffer:
             buffer.write(img)
-            return child_item
+            return item
 
     # Read background image from file into PIL
     background = Image.open("./images/" + str(parent_item.id) + ".jpg")
@@ -88,18 +107,18 @@ def create_modified_item(item_id: int = Form(...), user_id: int = Form(...), ima
     # Save to file with provited filename
     background.save("./images/" + file_name, "PNG")
 
-    return child_item
+    return item
 
 
 @router.get("/feed/", response_model=list[schemas.Item])
-def get_new_feed_items(db: Session = Depends(get_db)):
+def get_feed_items(db: Session = Depends(get_db)):
     items = crud.get_feed_items(db)
     return items
 
 
-@router.get("/feed/{item_id}", response_model=list[schemas.Item])
+@router.get("/history/{item_id}", response_model=list[schemas.Item])
 def get_item_history(item_id: int, db: Session = Depends(get_db)):
-    items = crud.get_row_items(db, item_id=item_id)
+    items = crud.get_history_items(db, item_id=item_id)
     return items
 
 
@@ -118,14 +137,27 @@ async def upload_art_with_json(item: schemas.ItemCreate, image: UploadFile = Fil
 '''
 
 
-@router.post("/upload", response_model=schemas.Item)
-async def create_and_upload_a_new_item(name: str = Form(...), user_id: int = Form(...), image: UploadFile = File(...), db: Session = Depends(get_db)):
-    print({"filename": image.filename})
-    item = schemas.ItemCreate(name=name, owner_id=user_id)
-    item = crud.create_item(db=db, item=item)
+@router.delete("/{item_id}")
+def delete_user_content(item_id: int, db: Session = Depends(get_db)):
+    item = crud.delete_user_item(db=db, item_id=item_id)
 
-    filename = str(item.id) + ".jpg"
-    with open("./images/" + filename, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
+    # Delete stored image file
+    try:
+        os.remove("./images/" + str(item.id) + ".jpg")
+    except:
+        pass
 
     return item
+
+
+@router.post("/destroy/")
+def delete_all_user_created_content(db: Session = Depends(get_db)):
+    items = crud.delete_all_user_items(db=db)
+
+    count = 0
+    for item in items:
+        # Delete stored image file
+        os.remove("./images/" + str(item.id) + ".jpg")
+        count += 1
+
+    return {"deleted": count}

@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
-from .routers import admin, art, users
+
 from typing import Callable
+
+from .database import Base, engine
+from .UserService import routes as users
+from .ArtService import routes as art
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
@@ -13,12 +17,13 @@ description = """
 * **Switch database from SQLite to PostgreSQL**.
 """
 
+
 api = FastAPI(
     title="Vandal REST API",
     description=description,
     version="0.0.2"
 )
-origins = ["*"]
+origins = ['http://localhost:3000']
 
 api.add_middleware(
     CORSMiddleware,
@@ -31,7 +36,6 @@ api.add_middleware(
 
 api.include_router(art.router)
 api.include_router(users.router)
-api.include_router(admin.router)
 
 
 api.mount("/images", StaticFiles(directory="images/"), name="images")
@@ -65,5 +69,9 @@ def update_schema_name(app: FastAPI, function: Callable, name: str) -> None:
             break
 
 
-update_schema_name(api, art.create_modified_item, "Submit")
-update_schema_name(api, art.create_and_upload_a_new_item, "Upload")
+update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
+update_schema_name(api, art.create_base_item, "FormBaseItem")
+
+
+# Run database migration
+Base.metadata.create_all(bind=engine)

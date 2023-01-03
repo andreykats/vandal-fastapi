@@ -1,12 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
 from ..dependencies import get_db
-from .. import crud, schemas
+from . import crud, schemas
+
+
+# Clean up verbose function names in Client Generator
+def generate_unique_id(route: APIRoute):
+    return f"{route.tags[0]}-{route.name}"
 
 
 router = APIRouter(
     prefix="/users",
-    tags=["users"]
+    tags=["users"],
+    generate_unique_id_function=generate_unique_id
 )
 
 
