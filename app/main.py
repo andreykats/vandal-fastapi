@@ -17,42 +17,45 @@ description = """
 * **Switch database from SQLite to PostgreSQL**.
 """
 
-
+# Create a FastAPI instance
 api = FastAPI(
     title="Vandal REST API",
     description=description,
     version="0.0.2"
 )
 
-
-origins = ['http://localhost:3000']
-
+# Add CORS handling. For dev everything is set to open
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=['http://localhost:3000'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# Add the individual service routers to the main api process
 api.include_router(art.router)
 api.include_router(users.router)
 api.include_router(admin.router)
 
 
+# Manually set non-pydantic schema names
 update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
 update_schema_name(api, art.create_base_item, "FormBaseItem")
 
 
+# Add mounted directories serving static files
 api.mount("/images", StaticFiles(directory="images/"), name="images")
 # api.mount("/", StaticFiles(directory="build/", html=True), name="build")
 
 
-@api.get("/")
-async def redirect():
-    return RedirectResponse("/docs")
-
-
 # Run database migration
 Base.metadata.create_all(bind=engine)
+
+
+# Specify the root route
+@api.get("/")
+async def redirect():
+    # Redirect to the docs route for now
+    return RedirectResponse("/docs")
