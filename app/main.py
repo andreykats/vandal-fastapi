@@ -4,10 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 
 from .database import Base, engine
+from .utility import update_schema_name
 from .UserService import routes as users
 from .ArtService import routes as art
 from .AdminService import routes as admin
-from .utility import update_schema_name
+from .LiveService import routes as live
+
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
@@ -38,6 +40,7 @@ api.add_middleware(
 api.include_router(art.router)
 api.include_router(users.router)
 api.include_router(admin.router)
+api.include_router(live.router)
 
 
 # Manually set non-pydantic schema names
