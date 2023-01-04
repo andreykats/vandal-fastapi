@@ -3,11 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 
-from typing import Callable
-
 from .database import Base, engine
 from .UserService import routes as users
 from .ArtService import routes as art
+from .AdminService import routes as admin
+from .utility import update_schema_name
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
@@ -23,6 +23,8 @@ api = FastAPI(
     description=description,
     version="0.0.2"
 )
+
+
 origins = ['http://localhost:3000']
 
 api.add_middleware(
@@ -36,6 +38,11 @@ api.add_middleware(
 
 api.include_router(art.router)
 api.include_router(users.router)
+api.include_router(admin.router)
+
+
+update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
+update_schema_name(api, art.create_base_item, "FormBaseItem")
 
 
 api.mount("/images", StaticFiles(directory="images/"), name="images")
@@ -45,32 +52,6 @@ api.mount("/images", StaticFiles(directory="images/"), name="images")
 @api.get("/")
 async def redirect():
     return RedirectResponse("/docs")
-
-
-def update_schema_name(app: FastAPI, function: Callable, name: str) -> None:
-    """
-    Updates the Pydantic schema name for a FastAPI function that takes
-    in a fastapi.UploadFile = File(...) or bytes = File(...).
-
-    This is a known issue that was reported on FastAPI#1442 in which
-    the schema for file upload routes were auto-generated with no
-    customization options. This renames the auto-generated schema to
-    something more useful and clear.
-
-    Args:
-        app: The FastAPI application to modify.
-        function: The function object to modify.
-        name: The new name of the schema.
-    """
-    for route in app.routes:
-        print(route)
-        if route.endpoint is function:
-            route.body_field.type_.__name__ = name
-            break
-
-
-update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
-update_schema_name(api, art.create_base_item, "FormBaseItem")
 
 
 # Run database migration

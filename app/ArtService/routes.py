@@ -1,19 +1,14 @@
 from fastapi import APIRouter, Depends, Form, File, UploadFile
-from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
-from ..dependencies import get_db
-from . import crud, schemas
 import base64
 import shutil
 import os
-
-from PIL import Image
 import io
+from PIL import Image
 
-
-# Clean up verbose function names in Client Generator
-def generate_unique_id(route: APIRoute):
-    return f"{route.tags[0]}-{route.name}"
+from ..dependencies import get_db
+from . import crud, schemas
+from ..utility import generate_unique_id
 
 
 router = APIRouter(
