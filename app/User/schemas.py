@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from ..ArtService.schemas import Item
+from ..Art.schemas import Item
 
 
 class UserBase(BaseModel):
