@@ -5,10 +5,10 @@ from fastapi.responses import RedirectResponse
 
 from .database import Base, engine
 from .utility import update_schema_name
-from .UserService import routes as users
-from .ArtService import routes as art
-from .AdminService import routes as admin
-from .LiveService import routes as live
+from .User import routes as users
+from .Art import routes as art
+from .Admin import routes as admin
+from .Live import routes as live
 
 
 description = """
