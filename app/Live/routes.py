@@ -1,15 +1,11 @@
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import RedirectResponse, HTMLResponse
 from typing import List
-
-
 import asyncio
 import logging
-# from redis import asyncio as aioredis
+
 import aioredis
 from aioredis.client import Redis, PubSub
-import json
-
 
 from ..utility import generate_unique_id
 
@@ -101,7 +97,7 @@ class WebsocketManager:
 
     async def broadcast(self, channel: int, message: str):
         for connection in self.active_channels[channel]:
-            await connection.send_text(json.dumps(message))
+            await connection.send_text(message)
 
 
 manager = WebsocketManager()
@@ -131,12 +127,12 @@ async def websocket_endpoint(websocket: WebSocket, channel: int):
             await manager.broadcast(channel, data)
             # await manager.send({"item_id": item_id, "message": data}, websocket)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(channel, websocket)
 
 ######################
 
 
-@router.websocket("/test/ws")
+@router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     await redis_connector(websocket)

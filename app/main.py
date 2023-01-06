@@ -10,8 +10,6 @@ from .Art import routes as art
 from .Admin import routes as admin
 from .Live import routes as live
 
-from redis import asyncio as aioredis
-
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
