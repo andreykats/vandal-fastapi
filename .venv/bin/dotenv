@@ -1,4 +1,4 @@
-#!/Users/Andrey/Desktop/vandal-fastapi/.venv/bin/python3.11
+#!/Users/Andrey/Projects/V/vandal/fastapi/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
