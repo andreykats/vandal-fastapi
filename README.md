@@ -12,26 +12,42 @@ https://www.python.org/downloads/
 git clone git@github.com:andreykats/vandal-fastapi.git
 ```
 
-Activate virtual environment:
+### Initialize virtual environment:
+In the project directory, run:
+
+```
+python -m venv .venv
+```
+
+### Activate virtual environment:
+In the project directory, run:
 
 ```
 source .venv/bin/activate
 ```
 
-Install dependencies:
+### Install dependencies:
+
+In the project directory, run:
 
 ```
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Running
-Running in development on localhost:
 
-Usage: 
-`uvicorn project_dir.project_file.fastapi_instance --reload`
+### Activate virtual environment if deactivated:
+In the project directory, run:
 
 ```
-uvicorn app.main:api --reload --host 0.0.0.0 --port 8000
+source .venv/bin/activate
+```
+
+
+### Start on localhost:
+In the project directory, run:
+```
+python run.py
 ```
 
 ## Admin
