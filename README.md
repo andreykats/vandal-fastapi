@@ -3,7 +3,7 @@ Python API Service
 
 ## Requirements
 
-Python 3.11
+Python 3.10
 
 https://www.python.org/downloads/
 ## Installation
