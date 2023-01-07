@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import RedirectResponse, HTMLResponse
 from typing import List
-import asyncio
+# import asyncio
 import logging
 
-import aioredis
-from aioredis.client import Redis, PubSub
+# import aioredis
+# from aioredis.client import Redis, PubSub
 
 from ..utility import generate_unique_id
 
@@ -132,48 +132,48 @@ async def websocket_endpoint(websocket: WebSocket, channel: int):
 ######################
 
 
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    await redis_connector(websocket)
+# @router.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     await redis_connector(websocket)
 
 
-async def redis_connector(websocket: WebSocket):
-    async def consumer_handler(conn: Redis, ws: WebSocket):
-        try:
-            while True:
-                message = await ws.receive_text()
-                if message:
-                    await conn.publish("chat:c", message)
-        except WebSocketDisconnect as exc:
-            # TODO this needs handling better
-            logger.error(exc)
+# async def redis_connector(websocket: WebSocket):
+#     async def consumer_handler(conn: Redis, ws: WebSocket):
+#         try:
+#             while True:
+#                 message = await ws.receive_text()
+#                 if message:
+#                     await conn.publish("chat:c", message)
+#         except WebSocketDisconnect as exc:
+#             # TODO this needs handling better
+#             logger.error(exc)
 
-    async def producer_handler(pubsub: PubSub, ws: WebSocket):
-        await pubsub.subscribe("chat:c")
-        # assert isinstance(channel, PubSub)
-        try:
-            while True:
-                message = await pubsub.get_message(ignore_subscribe_messages=True)
-                if message:
-                    await ws.send_text(message.get('data'))
-        except Exception as exc:
-            # TODO this needs handling better
-            logger.error(exc)
+#     async def producer_handler(pubsub: PubSub, ws: WebSocket):
+#         await pubsub.subscribe("chat:c")
+#         # assert isinstance(channel, PubSub)
+#         try:
+#             while True:
+#                 message = await pubsub.get_message(ignore_subscribe_messages=True)
+#                 if message:
+#                     await ws.send_text(message.get('data'))
+#         except Exception as exc:
+#             # TODO this needs handling better
+#             logger.error(exc)
 
-    conn = await get_redis_pool()
-    pubsub = conn.pubsub()
+#     conn = await get_redis_pool()
+#     pubsub = conn.pubsub()
 
-    consumer_task = consumer_handler(conn=conn, ws=websocket)
-    producer_task = producer_handler(pubsub=pubsub, ws=websocket)
-    done, pending = await asyncio.wait(
-        [consumer_task, producer_task], return_when=asyncio.FIRST_COMPLETED,
-    )
-    logger.debug(f"Done task: {done}")
-    for task in pending:
-        logger.debug(f"Canceling task: {task}")
-        task.cancel()
+#     consumer_task = consumer_handler(conn=conn, ws=websocket)
+#     producer_task = producer_handler(pubsub=pubsub, ws=websocket)
+#     done, pending = await asyncio.wait(
+#         [consumer_task, producer_task], return_when=asyncio.FIRST_COMPLETED,
+#     )
+#     logger.debug(f"Done task: {done}")
+#     for task in pending:
+#         logger.debug(f"Canceling task: {task}")
+#         task.cancel()
 
 
-async def get_redis_pool():
-    return await aioredis.from_url(f'redis://localhost', encoding="utf-8", decode_responses=True)
+# async def get_redis_pool():
+#     return await aioredis.from_url(f'redis://localhost', encoding="utf-8", decode_responses=True)
