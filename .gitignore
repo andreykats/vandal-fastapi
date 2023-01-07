@@ -25,6 +25,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.venv/
 
 # Database
 # *.db
+
+# misc
+.DS_Store

@@ -40,6 +40,7 @@ api.add_middleware(
 api.include_router(art.router)
 api.include_router(users.router)
 api.include_router(admin.router)
+api.include_router(live.router)
 
 
 # Manually set non-pydantic schema names
