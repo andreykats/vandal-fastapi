@@ -26,6 +26,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 .venv/
+.pytest_cache/
+.vscode/
 
 # Database
 # *.db
