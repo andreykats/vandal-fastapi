@@ -4,7 +4,7 @@ from typing import Callable
 
 
 # Clean up verbose function names in Client Generator
-def generate_unique_id(route: APIRoute):
+def generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
 
@@ -24,7 +24,6 @@ def update_schema_name(app: FastAPI, function: Callable, name: str) -> None:
         name: The new name of the schema.
     """
     for route in app.routes:
-        print(route)
         if route.endpoint is function:
             route.body_field.type_.__name__ = name
             break
