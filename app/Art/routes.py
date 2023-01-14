@@ -81,40 +81,20 @@ def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), i
     img = base64.b64decode(image_as_bytes)
     file_name = str(item.id) + ".jpg"
 
-    # If the image from parent item is actially the base art image then skip the blending step and just save it to file.
-    if parent_item.id == parent_item.base_layer_id:
-        with open("./images/" + file_name, "wb") as buffer:
-            buffer.write(img)
-            return item
-
-    # Read background image from file into PIL
-    background = Image.open("./images/" + str(parent_item.id) + ".jpg")
-
-    # Read overlay image from byte string into PIL
-    overlay = Image.open(io.BytesIO(img))
-
-    # First parameter to .paste() is the image to paste.
-    # Second are coordinates, and the secret sauce is the third parameter.
-    # It indicates a mask that will be used to paste the image.
-    # If you pass a image with transparency, then the alpha channel is used as mask.
-    background.paste(overlay, (0, 0), overlay)
-
-    # Save to file with provited filename
-    background.save("./images/" + file_name, "PNG")
-
-    return item
+    # save image to disk
+    with open("./images/" + file_name, "wb") as buffer:
+        buffer.write(img)
+        return item
 
 
-@router.get("/feed/", response_model=list[schemas.Item])
+@router.get("/feed/", response_model=list[schemas.Artwork])
 def get_feed_items(db: Session = Depends(get_db)):
-    items = crud.get_feed_items(db)
-    return items
+    return crud.get_feed_items(db)
 
 
-@router.get("/history/{item_id}", response_model=list[schemas.Item])
-def get_item_history(item_id: int, db: Session = Depends(get_db)):
-    items = crud.get_history_items(db, item_id=item_id)
-    return items
+@router.get("/history/{item_id}", response_model=list[schemas.Artwork])
+def get_artwork_history(item_id: int, db: Session = Depends(get_db)):
+    return crud.get_artwork_history(db, item_id=item_id)
 
 
 '''
