@@ -34,10 +34,9 @@ def create_items(items: list[schemas.ItemCreate], db: Session = Depends(get_db))
     return item_list
 
 
-@router.get("/{item_id}", response_model=schemas.Item)
-def get_item(item_id: int, db: Session = Depends(get_db)):
-    item = crud.get_item(db, item_id=item_id)
-    return item
+@router.get("/{item_id}", response_model=schemas.Artwork)
+def get_artwork(item_id: int, db: Session = Depends(get_db)):
+    return crud.get_artwork(db, item_id=item_id)
 
 
 '''
@@ -68,7 +67,7 @@ async def create_base_item(name: str = Form(...), user_id: int = Form(...), imag
     return item
 
 
-@router.post("/submit", response_model=schemas.Item)
+@router.post("/submit", response_model=schemas.Artwork)
 def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
     parent_item = crud.get_item(db, item_id=item_id)
     db_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id)
@@ -84,7 +83,8 @@ def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), i
     # save image to disk
     with open("./images/" + file_name, "wb") as buffer:
         buffer.write(img)
-        return item
+
+    return crud.get_artwork(db, item.id)
 
 
 @router.get("/feed/", response_model=list[schemas.Artwork])
