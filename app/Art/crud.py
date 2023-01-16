@@ -13,28 +13,41 @@ def get_item(db: Session, item_id: int):
 
 def get_feed_items(db: Session):
     # Get all base_layer_ids and flatten to remove tuple
-    base_ids = [id for id, in db.execute(select(models.Item.base_layer_id))]
+    all_base_layer_ids = [id for id, in db.execute(select(models.Item.base_layer_id))]
 
     # Return unique
-    unique_base_ids = set(base_ids)
+    unique_base_layer_ids = set(all_base_layer_ids)
 
     # Create a new feed array
-    feed = []
+    artwork_list = []
 
     # For every base_id add the most recent layer created
-    for id in unique_base_ids:
-        result = db.query(models.Item).filter(models.Item.base_layer_id == id).order_by(models.Item.id.desc()).first()
-        feed.append(result)
+    for id in unique_base_layer_ids:
+        item = db.query(models.Item).filter(models.Item.base_layer_id == id).order_by(models.Item.id.desc()).first()
+        items = db.query(models.Item).filter(models.Item.base_layer_id == id).order_by(models.Item.id.desc()).all()
+        artwork_list.append(schemas.Artwork(id=item.id, name=item.name, layers=items))
 
     # Sort by most recent submissions
-    sorted_feed = sorted(feed, key=lambda x: x.id, reverse=True)
+    # sorted_feed = sorted(feed, key=lambda x: x.id, reverse=True)
 
-    return sorted_feed
+    return artwork_list
+    # return sorted_feed
 
 
-def get_history_items(db: Session, item_id: int):
+def get_artwork(db: Session, item_id: int):
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
-    return db.query(models.Item).filter(models.Item.base_layer_id == item.base_layer_id).order_by(models.Item.id.desc()).all()
+    items_list = db.query(models.Item).filter(models.Item.base_layer_id == item.base_layer_id).filter(models.Item.id <= item.id).order_by(models.Item.id.desc()).all()
+    return schemas.Artwork(id=item.id, name=item.name, layers=items_list)
+
+
+def get_artwork_history(db: Session, item_id: int):
+    item = db.query(models.Item).filter(models.Item.id == item_id).first()
+    items_list = db.query(models.Item).filter(models.Item.base_layer_id == item.base_layer_id).order_by(models.Item.id.desc()).all()
+    artwork_list = []
+    for item in items_list:
+        artwork_list.append(get_artwork(db, item.id))
+
+    return artwork_list
 
 
 def create_item(db: Session, item: schemas.ItemCreate):
