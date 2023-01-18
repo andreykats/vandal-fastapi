@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.main import api
 from app.dependencies import get_db
-from app.database import Base
+from app.db_sql import Base
 
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_sqlite.db"
