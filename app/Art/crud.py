@@ -1,14 +1,30 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from . import models, schemas
+from ..live import crud
 
 
 def get_all_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Item).offset(skip).limit(limit).all()
 
 
-def get_item(db: Session, item_id: int):
+def get_item(db: Session, item_id: int) -> models.Item:
     return db.query(models.Item).filter(models.Item.id == item_id).first()
+
+
+def set_item_active(db: Session, item_id: int, is_active: bool) -> models.Item:
+    item = get_item(db, item_id=item_id)
+    if item.is_active == is_active:
+        return item
+
+    # Delete all messages from DynamoDB if item is being deactivated
+    if item.is_active == True and is_active == False:
+        crud.delete_messages(item_id)
+
+    item.is_active = is_active
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 def get_feed_items(db: Session):
@@ -25,7 +41,7 @@ def get_feed_items(db: Session):
     for id in unique_base_layer_ids:
         item = db.query(models.Item).filter(models.Item.base_layer_id == id).order_by(models.Item.id.desc()).first()
         items = db.query(models.Item).filter(models.Item.base_layer_id == id).order_by(models.Item.id.desc()).all()
-        artwork_list.append(schemas.Artwork(id=item.id, name=item.name, layers=items))
+        artwork_list.append(schemas.Artwork(id=item.id, name=item.name, layers=items, is_active=item.is_active))
 
     # Sort by most recent submissions
     # sorted_feed = sorted(feed, key=lambda x: x.id, reverse=True)
@@ -37,7 +53,7 @@ def get_feed_items(db: Session):
 def get_artwork(db: Session, item_id: int):
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     items_list = db.query(models.Item).filter(models.Item.base_layer_id == item.base_layer_id).filter(models.Item.id <= item.id).order_by(models.Item.id.desc()).all()
-    return schemas.Artwork(id=item.id, name=item.name, layers=items_list)
+    return schemas.Artwork(id=item.id, name=item.name, layers=items_list, is_active=item.is_active)
 
 
 def get_artwork_history(db: Session, item_id: int):

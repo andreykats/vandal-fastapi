@@ -14,6 +14,8 @@ from boto3.resources.base import ServiceResource
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+BROADCAST_CHANNEL = 0
+
 
 router = APIRouter(
     prefix="/live",
@@ -25,15 +27,15 @@ router = APIRouter(
 @router.websocket("/")
 # Broadcast message to all websocket connections
 async def websocket_broadcast(websocket: WebSocket):
-    await manager.connect(websocket)
+    await manager.connect(BROADCAST_CHANNEL, websocket)
     try:
         while True:
             data = await websocket.receive_text()
             # print(f"Received message from {websocket}: {data}")
-            await manager.broadcast(data)
+            await manager.broadcast(BROADCAST_CHANNEL, data)
             # await manager.send({"item_id": item_id, "message": data}, websocket)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(BROADCAST_CHANNEL, websocket)
 
 
 @router.websocket("/{channel}")
@@ -44,6 +46,7 @@ async def websocket_endpoint(websocket: WebSocket, channel: int):
     message_list = crud.get_messages(channel)
     for message in message_list:
         await websocket.send_text(message["body"])
+        print(message["body"])
 
     try:
         while True:

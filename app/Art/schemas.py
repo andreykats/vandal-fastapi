@@ -14,6 +14,7 @@ class ItemCreate(ItemBase):
 
 class Item(ItemBase):
     id: int
+    is_active: bool
 
     class Config:
         orm_mode = True
@@ -22,4 +23,5 @@ class Item(ItemBase):
 class Artwork(BaseModel):
     id: int
     name: str
+    is_active: bool
     layers: list[Item]

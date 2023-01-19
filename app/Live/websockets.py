@@ -1,6 +1,8 @@
 from fastapi import WebSocket
 from typing import List
 
+from . import crud, schemas
+
 
 class WebsocketManager:
     def __init__(self):

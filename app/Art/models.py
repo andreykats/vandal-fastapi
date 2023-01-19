@@ -10,5 +10,6 @@ class Item(Base):
     name = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     base_layer_id = Column(Integer, index=True)
+    is_active = Column(Boolean, default=False)
 
     owner = relationship("User", back_populates="items")

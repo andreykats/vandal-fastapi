@@ -47,7 +47,7 @@ api.include_router(live.router)
 # Manually set non-pydantic schema names
 update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
 update_schema_name(api, art.create_base_item, "FormBaseItem")
-
+update_schema_name(api, art.set_artwork_active, "FormActivateArtwork")
 
 # Add mounted directories serving static files
 api.mount("/images", StaticFiles(directory="images/"), name="images")

@@ -7,6 +7,9 @@ from boto3.resources.base import ServiceResource
 
 
 def get_messages(channel: str):
+    if not models.Message.exists():
+        models.Message.create_table(read_capacity_units=1, write_capacity_units=1)
+
     message_list = []
     for layer in models.Message.scan(models.Message.channel == channel):
         message_list.append(layer.attribute_values)
@@ -16,7 +19,8 @@ def get_messages(channel: str):
 
 
 def create_message(message: schemas.MessageCreate):
-    models.Message.create_table(read_capacity_units=1, write_capacity_units=1)
+    if not models.Message.exists():
+        models.Message.create_table(read_capacity_units=1, write_capacity_units=1)
 
     message = models.Message(
         id=str(uuid4()),
@@ -25,6 +29,7 @@ def create_message(message: schemas.MessageCreate):
         created_at=datetime.now()
     )
     message.save()
+
     return message.attribute_values
 
 

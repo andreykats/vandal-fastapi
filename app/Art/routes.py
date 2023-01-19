@@ -69,7 +69,8 @@ async def create_base_item(name: str = Form(...), user_id: int = Form(...), imag
 
 @router.post("/submit", response_model=schemas.Artwork)
 def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
-    parent_item = crud.get_item(db, item_id=item_id)
+    parent_item = crud.set_item_active(db, item_id=item_id, is_active=False)
+
     db_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id)
     item = crud.create_item(db=db, item=db_item)
 
@@ -85,6 +86,12 @@ def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), i
         buffer.write(img)
 
     return crud.get_artwork(db, item.id)
+
+
+@router.post("/activate", response_model=schemas.Artwork)
+def set_artwork_active(item_id: int = Form(...), is_active: bool = Form(...), db: Session = Depends(get_db)):
+    item = crud.set_item_active(db, item_id=item_id, is_active=is_active)
+    return crud.get_artwork(db, item_id=item.id)
 
 
 @router.get("/feed/", response_model=list[schemas.Artwork])
