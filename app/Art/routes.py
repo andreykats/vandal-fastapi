@@ -3,12 +3,13 @@ from sqlalchemy.orm import Session
 import base64
 import shutil
 import os
-import io
-from PIL import Image
+# import io
+# from PIL import Image
 
 from ..dependencies import get_db
 from . import crud, schemas
 from ..utility import generate_unique_id
+from ..live import websockets
 
 
 router = APIRouter(
@@ -68,10 +69,13 @@ async def create_base_item(name: str = Form(...), user_id: int = Form(...), imag
 
 
 @router.post("/submit", response_model=schemas.Artwork)
-def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
+async def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
+
+    # Set incoming layer back to inactive
     parent_item = crud.set_item_active(db, item_id=item_id, is_active=False)
 
-    db_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id)
+    # Create new layer
+    db_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id, height=parent_item.height, width=parent_item.width)
     item = crud.create_item(db=db, item=db_item)
 
     # Convert string to bytes
@@ -81,16 +85,23 @@ def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), i
     img = base64.b64decode(image_as_bytes)
     file_name = str(item.id) + ".jpg"
 
-    # save image to disk
+    # Save image to disk
     with open("./images/" + file_name, "wb") as buffer:
         buffer.write(img)
+
+    # Broadcast notifiction over websocket
+    await websockets.announce_new_message()
 
     return crud.get_artwork(db, item.id)
 
 
 @router.post("/activate", response_model=schemas.Artwork)
-def set_artwork_active(item_id: int = Form(...), is_active: bool = Form(...), db: Session = Depends(get_db)):
+async def set_artwork_active(item_id: int = Form(...), is_active: bool = Form(...), db: Session = Depends(get_db)):
     item = crud.set_item_active(db, item_id=item_id, is_active=is_active)
+
+    # Broadcast notifiction over websocket
+    await websockets.announce_new_message()
+
     return crud.get_artwork(db, item_id=item.id)
 
 

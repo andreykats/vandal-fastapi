@@ -47,7 +47,6 @@ async def websocket_endpoint(websocket: WebSocket, channel: int):
     for message in message_list:
         await websocket.send_text(message["body"])
         print(message["body"])
-
     try:
         while True:
             data = await websocket.receive_text()

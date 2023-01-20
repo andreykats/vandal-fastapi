@@ -1,7 +1,10 @@
 from fastapi import WebSocket
 from typing import List
+import json
 
 from . import crud, schemas
+
+BROADCAST_CHANNEL = 0
 
 
 class WebsocketManager:
@@ -41,3 +44,8 @@ class WebsocketManager:
 
 
 manager = WebsocketManager()
+
+
+async def announce_new_message():
+    message = json.dumps({"message": {"action": "reload"}})
+    await manager.broadcast(BROADCAST_CHANNEL, message)

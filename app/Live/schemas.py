@@ -13,5 +13,5 @@ class MessageCreate(MessageBase):
 
 
 class Layer(MessageBase):
-    id: str
+    id: str = Field(example="da09a712-d5c7-4e0b-be5d-2d6c98ce8b92")
     created_at: datetime
