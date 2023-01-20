@@ -6,6 +6,17 @@ Python API Service
 Python 3.10
 
 https://www.python.org/downloads/
+
+Docker Desktop
+
+https://www.docker.com/products/docker-desktop
+
+DynamoDB-Local
+
+https://hub.docker.com/r/amazon/dynamodb-local
+
+
+
 ## Installation
 
 ```
