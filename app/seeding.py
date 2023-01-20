@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from .database import engine
+from .db_sql import engine
 from sqlalchemy import event
 from . import models
 session = Session(engine, future=True)

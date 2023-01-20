@@ -3,12 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 
-from .database import Base, engine
+from .db_sql import Base, engine
 from .utility import update_schema_name
-from .User import routes as users
-from .Art import routes as art
-from .Admin import routes as admin
-from .Live import routes as live
+from .user import routes as users
+from .art import routes as art
+from .admin import routes as admin
+from .live import routes as live
+from .art_dynamodb import routes as art_dynamodb
 
 
 description = """
@@ -37,16 +38,16 @@ api.add_middleware(
 
 
 # Add the individual service routers to the main api process
+api.include_router(art_dynamodb.router)
 api.include_router(art.router)
 api.include_router(users.router)
 api.include_router(admin.router)
 api.include_router(live.router)
 
-
 # Manually set non-pydantic schema names
 update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
 update_schema_name(api, art.create_base_item, "FormBaseItem")
-
+update_schema_name(api, art.set_artwork_active, "FormActivateArtwork")
 
 # Add mounted directories serving static files
 api.mount("/images", StaticFiles(directory="images/"), name="images")

@@ -6,6 +6,8 @@ class ItemBase(BaseModel):
     name: str = Field(example="Mona Lisa")
     owner_id: int = Field(example=1)
     base_layer_id: Optional[int] = Field(example=4)
+    height: int = Field(example=100)
+    width: int = Field(example=100)
 
 
 class ItemCreate(ItemBase):
@@ -14,6 +16,7 @@ class ItemCreate(ItemBase):
 
 class Item(ItemBase):
     id: int
+    is_active: bool
 
     class Config:
         orm_mode = True
@@ -22,4 +25,7 @@ class Item(ItemBase):
 class Artwork(BaseModel):
     id: int
     name: str
+    is_active: bool
+    height: int
+    width: int
     layers: list[Item]

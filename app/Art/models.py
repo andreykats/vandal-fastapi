@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from ..database import Base
+from ..db_sql import Base
 
 
 class Item(Base):
@@ -10,5 +10,8 @@ class Item(Base):
     name = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
     base_layer_id = Column(Integer, index=True)
+    is_active = Column(Boolean, default=False)
+    height = Column(Integer)
+    width = Column(Integer)
 
     owner = relationship("User", back_populates="items")

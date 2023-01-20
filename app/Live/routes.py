@@ -1,17 +1,20 @@
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
 from typing import List
-# import asyncio
 import logging
 
-# import aioredis
-# from aioredis.client import Redis, PubSub
-
+from . import crud, schemas
 from ..utility import generate_unique_id
+from ..dependencies import get_ddb
+from .websockets import manager
+
+from boto3.resources.base import ServiceResource
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+BROADCAST_CHANNEL = 0
 
 
 router = APIRouter(
@@ -21,7 +24,65 @@ router = APIRouter(
 )
 
 
-@router.get("/{room}", response_class=HTMLResponse)
+@router.websocket("/")
+# Broadcast message to all websocket connections
+async def websocket_broadcast(websocket: WebSocket):
+    await manager.connect(BROADCAST_CHANNEL, websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # print(f"Received message from {websocket}: {data}")
+            await manager.broadcast(BROADCAST_CHANNEL, data)
+            # await manager.send({"item_id": item_id, "message": data}, websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(BROADCAST_CHANNEL, websocket)
+
+
+@router.websocket("/{channel}")
+async def websocket_endpoint(websocket: WebSocket, channel: int):
+    await manager.connect(channel, websocket)
+
+    # When sockets connect, send them the current list of messages
+    message_list = crud.get_messages(channel)
+    for message in message_list:
+        await websocket.send_text(message["body"])
+        print(message["body"])
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.broadcast(channel, data)
+
+            # Create a new message in the database
+            msg = schemas.MessageCreate(channel=channel, body=data)
+            crud.create_message(msg)
+
+    except WebSocketDisconnect:
+        manager.disconnect(channel, websocket)
+
+
+@router.get("/{channel}", response_model=list[schemas.Layer])
+def get_messages(channel: str):
+    message_list = crud.get_messages(channel)
+    return message_list
+
+
+@router.post("/", response_model=list[schemas.Layer])
+def create_messages(items: list[schemas.MessageCreate]):
+    message_list = []
+    for x in items:
+        message = crud.create_message(message=x)
+        message_list.append(message)
+
+    return message_list
+
+
+@router.delete("/{channel}")
+def delete_channel_content(channel: str):
+    result = crud.delete_messages(channel=channel)
+    return result
+
+
+@router.get("/chat/{channel}", response_class=HTMLResponse)
 async def websocket_chat():
     return """
         <!DOCTYPE html>
@@ -44,7 +105,7 @@ async def websocket_chat():
                 var client_id = 1
                 const lastComponent = new URL(window.location).pathname.split("/").pop()
                 document.querySelector("#ws-id").textContent = lastComponent;
-                var ws = new WebSocket(`ws://localhost:8000/live/${lastComponent}`);
+                var ws = new WebSocket(`ws://localhost:8080/live/${lastComponent}`);
                 ws.onmessage = function (event) {
                     var messages = document.getElementById('messages')
                     var message = document.createElement('li')
@@ -63,71 +124,6 @@ async def websocket_chat():
         </html>
         """
 
-
-class WebsocketManager:
-    def __init__(self):
-        # self.active_connections: List[WebSocket] = []
-        # dictionary of arrays of websockets
-        self.active_channels: dict[int, List[WebSocket]] = {}
-
-    # async def connect(self, websocket: WebSocket):
-    #     await websocket.accept()
-    #     self.active_connections.append(websocket)
-
-    async def connect(self, channel: int, websocket: WebSocket):
-        await websocket.accept()
-        # add websocket to array inside dictionary
-        if channel not in self.active_channels:
-            self.active_channels[channel] = []
-        self.active_channels[channel].append(websocket)
-
-    # def disconnect(self, websocket: WebSocket):
-    #     self.active_connections.remove(websocket)
-
-    def disconnect(self, channel: int, websocket: WebSocket):
-        if channel in self.active_channels:
-            self.active_channels[channel].remove(websocket)
-
-    # async def send(self, message: str, websocket: WebSocket):
-    #     await websocket.send_text(json.dumps(message))
-
-    # async def broadcast(self, message: str):
-    #     for connection in self.active_connections:
-    #         await connection.send_text(json.dumps(message))
-
-    async def broadcast(self, channel: int, message: str):
-        for connection in self.active_channels[channel]:
-            await connection.send_text(message)
-
-
-manager = WebsocketManager()
-
-
-@router.websocket("/")
-# Broadcast message to all websocket connections
-async def websocket_broadcast(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # print(f"Received message from {websocket}: {data}")
-            await manager.broadcast(data)
-            # await manager.send({"item_id": item_id, "message": data}, websocket)
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
-
-@router.websocket("/{channel}")
-async def websocket_endpoint(websocket: WebSocket, channel: int):
-    await manager.connect(channel, websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # print(f"Received message from {channel}: {data}")
-            await manager.broadcast(channel, data)
-            # await manager.send({"item_id": item_id, "message": data}, websocket)
-    except WebSocketDisconnect:
-        manager.disconnect(channel, websocket)
 
 ######################
 
