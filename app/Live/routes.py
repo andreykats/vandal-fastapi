@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
-from typing import List
+# from typing import List
 import logging
 
 from . import crud, schemas
@@ -60,10 +60,9 @@ async def websocket_endpoint(websocket: WebSocket, channel: int):
         manager.disconnect(channel, websocket)
 
 
-@router.get("/{channel}", response_model=list[schemas.Layer])
-def get_messages(channel: str):
-    message_list = crud.get_messages(channel)
-    return message_list
+@router.get("/")
+def dyanamodb_admin():
+    return RedirectResponse("http://localhost:8001")
 
 
 @router.post("/", response_model=list[schemas.Layer])
@@ -73,6 +72,12 @@ def create_messages(items: list[schemas.MessageCreate]):
         message = crud.create_message(message=x)
         message_list.append(message)
 
+    return message_list
+
+
+@router.get("/{channel}", response_model=list[schemas.Layer])
+def get_messages(channel: str):
+    message_list = crud.get_messages(channel)
     return message_list
 
 

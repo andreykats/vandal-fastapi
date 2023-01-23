@@ -53,7 +53,9 @@ def get_feed_items(db: Session) -> List[schemas.Artwork]:
 
 
 def get_artwork(db: Session, item_id: int) -> schemas.Artwork:
+    # Get layer for provided item_id
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
+    # Get all layers for base_layer_id
     items_list = db.query(models.Item).filter(models.Item.base_layer_id == item.base_layer_id).filter(models.Item.id <= item.id).order_by(models.Item.id.desc()).all()
     return schemas.Artwork(id=item.id, name=item.name, is_active=item.is_active, layers=items_list, height=item.height, width=item.width)
 
