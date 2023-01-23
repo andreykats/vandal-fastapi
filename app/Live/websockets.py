@@ -46,6 +46,6 @@ class WebsocketManager:
 manager = WebsocketManager()
 
 
-async def announce_new_message():
+async def announce_reload():
     message = json.dumps({"message": {"action": "reload"}})
     await manager.broadcast(BROADCAST_CHANNEL, message)

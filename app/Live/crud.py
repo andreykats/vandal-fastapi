@@ -3,8 +3,9 @@ from uuid import uuid4
 from datetime import datetime
 import json
 
-from botocore.exceptions import ClientError
-from boto3.resources.base import ServiceResource
+# -----------------------
+# DynamoDB CRUD functions
+# -----------------------
 
 
 def get_messages(channel: str) -> list[models.Message]:
@@ -34,8 +35,19 @@ def create_message(message: schemas.MessageCreate) -> models.Message:
     return message.attribute_values
 
 
-def delete_messages(channel: str) -> json:
-    result_list = []
-    for message in models.Message.scan(models.Message.channel == channel):
-        result_list.append(message.delete())
-    return json.dumps({"messages_deleted": len(result_list)})
+async def delete_channel_history(channel: str) -> json:
+    if models.Message.DoesNotExist():
+        return
+
+    try:
+        result = models.Message.scan(models.Message.channel == channel)
+    except Exception as error:
+        raise error
+
+    try:
+        result_list = []
+        for message in result:
+            result_list.append(message.delete())
+        return json.dumps({"messages_deleted": len(result_list)})
+    except Exception as error:
+        raise error

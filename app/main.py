@@ -6,10 +6,11 @@ from fastapi.responses import RedirectResponse
 from .db_sql import Base, engine
 from .utility import update_schema_name
 from .user import routes as users
-from .art import routes as art
 from .admin import routes as admin
 from .live import routes as live
-from .art_dynamodb import routes as art_dynamodb
+
+# from .art import routes as art
+from .art_dynamodb import routes as art
 
 
 description = """
@@ -38,16 +39,19 @@ api.add_middleware(
 
 
 # Add the individual service routers to the main api process
-api.include_router(art_dynamodb.router)
 api.include_router(art.router)
 api.include_router(users.router)
 api.include_router(admin.router)
 api.include_router(live.router)
 
 # Manually set non-pydantic schema names
-update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
-update_schema_name(api, art.create_base_item, "FormBaseItem")
-update_schema_name(api, art.set_artwork_active, "FormActivateArtwork")
+# update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
+# update_schema_name(api, art.create_base_item, "FormBaseItem")
+# update_schema_name(api, art.set_artwork_active, "FormActivateArtwork")
+
+update_schema_name(api, art.submit_new_layer, "FormNewLayer")
+update_schema_name(api, art.upload_base_layer, "FormBaseLayer")
+# update_schema_name(api, art.set_artwork_active, "FormActivate")
 
 # Add mounted directories serving static files
 api.mount("/images", StaticFiles(directory="images/"), name="images")
@@ -55,7 +59,7 @@ api.mount("/images", StaticFiles(directory="images/"), name="images")
 
 
 # Run database migration
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
 # Specify the root route

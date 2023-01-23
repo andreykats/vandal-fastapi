@@ -65,7 +65,7 @@ def dyanamodb_admin():
     return RedirectResponse("http://localhost:8001")
 
 
-@router.post("/", response_model=list[schemas.Layer])
+@router.post("/", response_model=list[schemas.Message])
 def create_messages(items: list[schemas.MessageCreate]):
     message_list = []
     for x in items:
@@ -75,7 +75,7 @@ def create_messages(items: list[schemas.MessageCreate]):
     return message_list
 
 
-@router.get("/{channel}", response_model=list[schemas.Layer])
+@router.get("/{channel}", response_model=list[schemas.Message])
 def get_messages(channel: str):
     message_list = crud.get_messages(channel)
     return message_list
@@ -83,7 +83,7 @@ def get_messages(channel: str):
 
 @router.delete("/{channel}")
 def delete_channel_content(channel: str):
-    result = crud.delete_messages(channel=channel)
+    result = crud.delete_channel_history(channel=channel)
     return result
 
 

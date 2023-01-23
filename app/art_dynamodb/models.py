@@ -48,7 +48,7 @@ class Layer(Model):
     owner_id = UnicodeAttribute(default=1)
     art_name = UnicodeAttribute()
     artist_name = UnicodeAttribute()
-    file_name = UnicodeAttribute()
+    file_name = UnicodeAttribute(null=True)
     width = NumberAttribute()
     height = NumberAttribute()
     is_base_layer = BooleanAttribute()
