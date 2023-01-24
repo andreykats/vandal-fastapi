@@ -1,14 +1,12 @@
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, HTTPException, Form, File, UploadFile
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from pynamodb.exceptions import DoesNotExist, DeleteError, GetError, ScanError, QueryError, TableError, TableDoesNotExist
-
-import logging
 
 from . import crud, files, schemas
 from ..utility import generate_unique_id
 from ..dependencies import get_ddb
 from ..live import crud as live_crud, websockets
 
+import logging
 import datetime
 
 logging.basicConfig(level=logging.INFO)
@@ -143,9 +141,9 @@ async def get_artwork(layer_id: str):
 
 
 @router.delete("/{layer_id}", response_model=schemas.Layer)
-async def delete_created_content(layer_id: str, created_at: datetime.datetime):
+async def delete_created_content(layer_id: str):
     try:
-        layer = await crud.delete_layer(layer_id=layer_id, created_at=created_at)
+        layer = await crud.delete_layer(layer_id=layer_id)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 

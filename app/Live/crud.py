@@ -13,7 +13,7 @@ def get_messages(channel: str) -> list[models.Message]:
         models.Message.create_table(read_capacity_units=1, write_capacity_units=1)
 
     message_list = []
-    for layer in models.Message.scan(models.Message.channel == channel):
+    for layer in models.Message.query(channel):
         message_list.append(layer.attribute_values)
 
     # return list sorted by created_at
@@ -36,18 +36,16 @@ def create_message(message: schemas.MessageCreate) -> models.Message:
 
 
 async def delete_channel_history(channel: str) -> json:
-    if models.Message.DoesNotExist():
-        return
-
     try:
-        result = models.Message.scan(models.Message.channel == channel)
+        result = models.Message.query(channel)
     except Exception as error:
         raise error
 
-    try:
-        result_list = []
-        for message in result:
+    result_list = []
+    for message in result:
+        try:
             result_list.append(message.delete())
-        return json.dumps({"messages_deleted": len(result_list)})
-    except Exception as error:
-        raise error
+        except Exception as error:
+            raise error
+
+    return {"messages_deleted": len(result_list)}

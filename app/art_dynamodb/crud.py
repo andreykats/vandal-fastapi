@@ -2,16 +2,21 @@ from pynamodb.exceptions import DoesNotExist, DeleteError, GetError, ScanError, 
 from . import schemas, models
 import datetime
 from uuid import uuid4
+from enum import Enum
 
 # -----------------------
 # DynamoDB CRUD functions
 # -----------------------
 
 
+CREATED_LAYER = "CREATED"
+BASE_LAYER = "BASE"
+
+
 async def get_all_base_layers(rate_limit: int = 15) -> list[schemas.Layer]:
     try:
         layer_list = []
-        for layer in models.Layer.scan(models.Layer.is_base_layer == True, rate_limit=rate_limit):  # Rate limit(RCU per second)
+        for layer in models.Layer.scan(models.Layer.layer_type == BASE_LAYER, rate_limit=rate_limit):  # Rate limit(RCU per second)
             layer_list.append(schemas.Layer(**layer.attribute_values))
         return layer_list
     except ScanError as error:
@@ -23,9 +28,11 @@ async def get_all_base_layers(rate_limit: int = 15) -> list[schemas.Layer]:
 async def get_all_created_layers(rate_limit: int = 15) -> list[schemas.Layer]:
     try:
         layer_list = []
-        for layer in models.Layer.scan(models.Layer.is_base_layer == False, rate_limit=rate_limit):  # Rate limit(RCU per second)
+        for layer in models.Layer.scan(models.Layer.layer_type == CREATED_LAYER, rate_limit=rate_limit):  # Rate limit(RCU per second)
             layer_list.append(schemas.Layer(**layer.attribute_values))
         return layer_list
+    except ScanError as error:
+        raise error
     except Exception as error:
         raise error
 
@@ -38,7 +45,7 @@ async def create_layer(schema: schemas.LayerCreate) -> schemas.Layer:
 
     generated_id = str(uuid4())
     current_datetime = datetime.datetime.now()
-    is_base_layer = False if schema.base_layer_id else True
+    layer_type = CREATED_LAYER if schema.base_layer_id else BASE_LAYER
     base_layer_id = schema.base_layer_id if schema.base_layer_id else generated_id
 
     layer = models.Layer(
@@ -50,7 +57,7 @@ async def create_layer(schema: schemas.LayerCreate) -> schemas.Layer:
         file_name=schema.file_name,
         height=schema.height,
         width=schema.width,
-        is_base_layer=is_base_layer,
+        layer_type=layer_type,
         created_at=current_datetime
     )
 
@@ -63,6 +70,7 @@ async def create_layer(schema: schemas.LayerCreate) -> schemas.Layer:
 
 async def get_artwork(layer_id: str) -> schemas.Artwork:
     try:
+        # Get the Layer for the given layer_id
         top_layer = models.Layer.query(layer_id).next()
     except DoesNotExist as error:
         raise error
@@ -70,7 +78,8 @@ async def get_artwork(layer_id: str) -> schemas.Artwork:
         raise error
 
     try:
-        result = models.Layer.scan((models.Layer.base_layer_id == top_layer.base_layer_id) & (models.Layer.created_at <= top_layer.created_at))
+        # Get all layers that share the found Layer's base_layer_id
+        result = models.Layer.base_layer_id_index.query(top_layer.base_layer_id, models.Layer.created_at <= top_layer.created_at)
     except Exception as error:
         raise error
 
@@ -85,9 +94,9 @@ async def get_artwork(layer_id: str) -> schemas.Artwork:
     return schemas.Artwork(layers=sorted_layer_list, **top_layer.attribute_values)
 
 
-async def delete_layer(layer_id: str, created_at: datetime.datetime) -> schemas.Layer:
+async def delete_layer(layer_id: str) -> schemas.Layer:
     try:
-        layer = models.Layer.get(hash_key=layer_id, range_key=created_at)
+        layer = models.Layer.query(layer_id).next()
     except DoesNotExist as error:
         raise error
     except Exception as error:
@@ -112,7 +121,7 @@ async def get_artwork_history(layer_id: str) -> list[schemas.Artwork]:
         raise error
 
     try:
-        result = models.Layer.scan(models.Layer.base_layer_id == top_layer.base_layer_id)
+        result = models.Layer.base_layer_id_index.query(top_layer.base_layer_id)
     except Exception as error:
         raise error
 
@@ -132,7 +141,8 @@ async def get_artwork_history(layer_id: str) -> list[schemas.Artwork]:
 
 async def get_latest_artworks() -> list[schemas.Artwork]:
     try:
-        result = models.Layer.scan(models.Layer.is_base_layer == True)
+        # Get all base layers
+        result = models.Layer.layer_type_index.query(BASE_LAYER)
     except Exception as error:
         raise error
 
@@ -140,7 +150,7 @@ async def get_latest_artworks() -> list[schemas.Artwork]:
     for base_layer in result:
         try:
             # Get all layers that share the base_layer_id
-            result = models.Layer.scan(models.Layer.base_layer_id == base_layer.id)
+            result = models.Layer.base_layer_id_index.query(base_layer.id)
         except Exception as error:
             raise error
 
@@ -149,7 +159,7 @@ async def get_latest_artworks() -> list[schemas.Artwork]:
             layer_list.append(layer)
 
         # Add base layer to layer list
-        layer_list.append(base_layer)
+        # layer_list.append(base_layer)
 
         # Sort layer list by timestamp and return a "schema layer" list
         sorted_layer_list = []
@@ -159,6 +169,7 @@ async def get_latest_artworks() -> list[schemas.Artwork]:
         # Create artwork from base layer and (sorted) layer list then append to artwork list
         artwork_list.append(schemas.Artwork(layers=sorted_layer_list, **sorted_layer_list[0].dict()))
 
+    print(len(artwork_list))
     return artwork_list
 
 

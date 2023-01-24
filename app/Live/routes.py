@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 # from typing import List
 import logging
@@ -82,9 +82,12 @@ def get_messages(channel: str):
 
 
 @router.delete("/{channel}")
-def delete_channel_content(channel: str):
-    result = crud.delete_channel_history(channel=channel)
-    return result
+async def delete_channel_content(channel: str):
+    try:
+        result = await crud.delete_channel_history(channel=channel)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
 @router.get("/chat/{channel}", response_class=HTMLResponse)
