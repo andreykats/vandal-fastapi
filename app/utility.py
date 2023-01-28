@@ -1,8 +1,9 @@
 from fastapi.routing import APIRoute, BaseRoute
 from typing import Callable, cast
 
-
 # Clean up verbose function names in Client Generator
+
+
 def generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
