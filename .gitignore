@@ -11,7 +11,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-# images/
+images/
 eggs/
 .eggs/
 lib/
@@ -30,7 +30,7 @@ MANIFEST
 .vscode/
 
 # Database
-# *.db
+*.db
 
 # misc
 .DS_Store

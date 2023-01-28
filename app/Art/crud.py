@@ -9,18 +9,18 @@ def get_all_items(db: Session, skip: int = 0, limit: int = 100) -> List[models.I
     return db.query(models.Item).offset(skip).limit(limit).all()
 
 
-def get_item(db: Session, item_id: int) -> models.Item:
-    return db.query(models.Item).filter(models.Item.id == item_id).first()
+async def get_item(db: Session, item_id: int) -> models.Item:
+    return await db.query(models.Item).filter(models.Item.id == item_id).first()
 
 
-def set_item_active(db: Session, item_id: int, is_active: bool) -> models.Item:
-    item = get_item(db, item_id=item_id)
+async def set_item_active(db: Session, item_id: int, is_active: bool) -> models.Item:
+    item = await get_item(db, item_id=item_id)
     if item.is_active == is_active:
         return item
 
-    # Delete all messages from DynamoDB if item is being deactivated
+    # Delete all messages from DynamoDB if item is beinxzsaabvcvbnvvnmbg deactivated
     if item.is_active == True and is_active == False:
-        crud.delete_messages(item_id)
+        await crud.delete_channel_history(channel=item.name)
 
     item.is_active = is_active
     db.commit()
@@ -60,7 +60,7 @@ def get_artwork(db: Session, item_id: int) -> schemas.Artwork:
     return schemas.Artwork(id=item.id, name=item.name, is_active=item.is_active, layers=items_list, height=item.height, width=item.width)
 
 
-def get_artwork_history(db: Session, item_id: int) -> List[schemas.Artwork]:
+async def get_artwork_history(db: Session, item_id: int) -> List[schemas.Artwork]:
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     items_list = db.query(models.Item).filter(models.Item.base_layer_id == item.base_layer_id).order_by(models.Item.id.desc()).all()
     artwork_list = []

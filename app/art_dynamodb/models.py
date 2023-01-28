@@ -2,6 +2,17 @@ from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, NumberAttribute, UTCDateTimeAttribute, BooleanAttribute
 from pynamodb.indexes import GlobalSecondaryIndex, AllProjection, KeysOnlyProjection
 
+from ..db_dynamo import config
+
+import sys
+
+
+class BaseTable(Model):
+    class Meta:
+        host = config.DB_HOST if config.ENVIRONMENT in ["local", "test"] else None
+        region = config.AWS_REGION
+        aws_access_key_id = config.AWS_ACCESS_KEY_ID
+
 
 class BaseLayerIdIndex(GlobalSecondaryIndex):
     """
@@ -31,18 +42,16 @@ class LayerTypeIndex(GlobalSecondaryIndex):
     layer_type = UnicodeAttribute(default="created", hash_key=True)
 
 
-class Layer(Model):
-    class Meta:
-        table_name = "art-layers"
-        host = "http://localhost:8000"
-        aws_access_key_id = 'AKIAVMXD3KUKQJMIJDSZ'
+class LayerTable(BaseTable):
+    class Meta(BaseTable.Meta):
+        table_name = "layer-table"
+        read_capacity_units = 1
+        write_capacity_units = 1
 
     id = UnicodeAttribute(hash_key=True)
-    base_layer_id_index = BaseLayerIdIndex()
-    base_layer_id = UnicodeAttribute()
-    layer_type_index = LayerTypeIndex()
+    base_layer_id = UnicodeAttribute(null=True)
     layer_type = UnicodeAttribute(default="created")
-    owner_id = UnicodeAttribute(default=1)
+    owner_id = UnicodeAttribute(default="1")
     art_name = UnicodeAttribute()
     artist_name = UnicodeAttribute()
     file_name = UnicodeAttribute(null=True)
@@ -50,3 +59,14 @@ class Layer(Model):
     height = NumberAttribute()
     is_active = BooleanAttribute(default=False)
     created_at = UTCDateTimeAttribute(range_key=True)
+
+    base_layer_id_index = BaseLayerIdIndex()
+    layer_type_index = LayerTypeIndex()
+
+
+# Create the table
+try:
+    if not LayerTable.exists():
+        LayerTable.create_table(wait=True)
+except Exception as e:
+    sys.exit("Database not available.")

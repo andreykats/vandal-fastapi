@@ -1,4 +1,4 @@
-[
+starting_layers = [
     {
         "art_name": "The Thunder Shower",
         "artist_name": "Vincent Van Gogh",

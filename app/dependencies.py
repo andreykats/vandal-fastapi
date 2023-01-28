@@ -1,5 +1,4 @@
 from .db_sql import SessionLocal
-from .db_dynamo import Service
 
 
 def get_db():
@@ -8,7 +7,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-def get_ddb():
-    return Service

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from .db_sql import engine
 from sqlalchemy import event
-from . import models
+from art import models
 session = Session(engine, future=True)
 
 INITIAL_DATA = {

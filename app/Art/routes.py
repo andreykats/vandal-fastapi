@@ -72,7 +72,7 @@ async def create_base_item(name: str = Form(...), user_id: int = Form(...), imag
 async def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(...), image_data: str = Form(...), db: Session = Depends(get_db)):
 
     # Set incoming layer back to inactive
-    parent_item = crud.set_item_active(db, item_id=item_id, is_active=False)
+    parent_item = await crud.set_item_active(db, item_id=item_id, is_active=False)
 
     # Create new layer
     db_item = schemas.ItemCreate(name=parent_item.name, owner_id=user_id, base_layer_id=parent_item.base_layer_id, height=parent_item.height, width=parent_item.width)
@@ -90,17 +90,17 @@ async def create_vandalized_item(item_id: int = Form(...), user_id: int = Form(.
         buffer.write(img)
 
     # Broadcast notifiction over websocket
-    await websockets.announce_new_message()
+    await websockets.announce_reload()
 
     return crud.get_artwork(db, item.id)
 
 
 @router.post("/activate", response_model=schemas.Artwork)
 async def set_artwork_active(item_id: int = Form(...), is_active: bool = Form(...), db: Session = Depends(get_db)):
-    item = crud.set_item_active(db, item_id=item_id, is_active=is_active)
+    item = await crud.set_item_active(db, item_id=item_id, is_active=is_active)
 
     # Broadcast notifiction over websocket
-    await websockets.announce_new_message()
+    await websockets.announce_reload()
 
     return crud.get_artwork(db, item_id=item.id)
 

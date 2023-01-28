@@ -3,18 +3,9 @@ Python API Service
 
 ## Requirements
 
-Python 3.10
-
-https://www.python.org/downloads/
-
-Docker Desktop
-
-https://www.docker.com/products/docker-desktop
-
-DynamoDB-Local
-
-https://hub.docker.com/r/amazon/dynamodb-local
-
+* Python 3.10
+* FastAPI
+* DynamoDB (PynamoDB)
 
 
 ## Installation

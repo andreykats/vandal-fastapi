@@ -49,9 +49,9 @@ api.include_router(live.router)
 # update_schema_name(api, art.create_base_item, "FormBaseItem")
 # update_schema_name(api, art.set_artwork_active, "FormActivateArtwork")
 
-update_schema_name(api, art.submit_new_layer, "FormNewLayer")
-update_schema_name(api, art.upload_base_layer, "FormBaseLayer")
-# update_schema_name(api, art.set_artwork_active, "FormActivate")
+update_schema_name(api.routes, art.submit_new_layer, "FormNewLayer")
+update_schema_name(api.routes, art.upload_base_layer, "FormBaseLayer")
+update_schema_name(api.routes, art.set_artwork_active, "FormActivate")
 
 # Add mounted directories serving static files
 api.mount("/images", StaticFiles(directory="images/"), name="images")

@@ -1,6 +1,5 @@
-from fastapi import FastAPI
-from fastapi.routing import APIRoute
-from typing import Callable
+from fastapi.routing import APIRoute, BaseRoute
+from typing import Callable, cast
 
 
 # Clean up verbose function names in Client Generator
@@ -8,7 +7,7 @@ def generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
 
-def update_schema_name(app: FastAPI, function: Callable, name: str) -> None:
+def update_schema_name(routes: list[BaseRoute], function: Callable, name: str) -> None:
     """
     Updates the Pydantic schema name for a FastAPI function that takes
     in a fastapi.UploadFile = File(...) or bytes = File(...).
@@ -23,7 +22,10 @@ def update_schema_name(app: FastAPI, function: Callable, name: str) -> None:
         function: The function object to modify.
         name: The new name of the schema.
     """
-    for route in app.routes:
-        if route.endpoint is function:
-            route.body_field.type_.__name__ = name
+    for base_route in routes:
+        api_route = cast(APIRoute, base_route)  # Convert to APIRoute to access endpoint and the body_fiel attribute
+        if api_route.endpoint is function:
+            if api_route.body_field is None:
+                break
+            api_route.body_field.type_.__name__ = name
             break

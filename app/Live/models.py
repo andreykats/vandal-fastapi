@@ -1,16 +1,23 @@
 from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, NumberAttribute, UTCDateTimeAttribute
 
+from ..db_dynamo import config
 
-class Message(Model):
-    """
-    A DynamoDB Layer
-    """
+import sys
+
+
+class BaseTable(Model):
     class Meta:
-        table_name = "websocket-history"
-        host = "http://localhost:8000"
-        aws_access_key_id = 'AKIAVMXD3KUKQJMIJDSZ'
-        # aws_secret_access_key = 'AKIAVMXD3KUKQJMIJDSZ'
+        host = config.DB_HOST if config.ENVIRONMENT in ["local", "test"] else None
+        region = config.AWS_REGION
+        aws_access_key_id = config.AWS_ACCESS_KEY_ID
+
+
+class MessageTable(BaseTable):
+    class Meta(BaseTable.Meta):
+        table_name = "websocket-history-table"
+        read_capacity_units = 1
+        write_capacity_units = 1
 
     id = UnicodeAttribute()
     channel = UnicodeAttribute(hash_key=True)
@@ -18,16 +25,9 @@ class Message(Model):
     created_at = UTCDateTimeAttribute(range_key=True)
 
 
-# class Channel(Model):
-#     """
-#     A DynamoDB Layer
-#     """
-#     class Meta:
-#         table_name = "websocket-history"
-#         host = "http://localhost:8000"
-#         aws_access_key_id = 'AKIAVMXD3KUKQJMIJDSZ'
-#         # aws_secret_access_key = 'AKIAVMXD3KUKQJMIJDSZ'
-
-#     id = UnicodeAttribute(hash_key=True)
-#     messages = ListAttribute(of=Message)
-#     created_at = UTCDateTimeAttribute()
+# Create the table
+try:
+    if not MessageTable.exists():
+        MessageTable.create_table(wait=True)
+except Exception as e:
+    sys.exit("Database not available.")

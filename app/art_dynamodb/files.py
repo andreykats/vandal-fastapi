@@ -33,5 +33,6 @@ async def save_image_file(file_name: str, image_file: typing.BinaryIO) -> str:
 async def delete_file(file_name: str) -> str:
     try:
         os.remove("./images/" + file_name)
+        return file_name
     except Exception as error:
         raise error

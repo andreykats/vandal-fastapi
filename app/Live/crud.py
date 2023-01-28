@@ -8,44 +8,46 @@ import json
 # -----------------------
 
 
-def get_messages(channel: str) -> list[models.Message]:
-    if not models.Message.exists():
-        models.Message.create_table(read_capacity_units=1, write_capacity_units=1)
+async def get_messages(channel: str) -> list[schemas.Message]:
+    try:
+        result = models.MessageTable.query(channel)
+    except Exception as error:
+        raise error
 
     message_list = []
-    for layer in models.Message.query(channel):
-        message_list.append(layer.attribute_values)
+    for model in result:
+        message_list.append(schemas.Message(**model.attribute_values))
 
     # return list sorted by created_at
-    return sorted(message_list, key=lambda k: k['created_at'])
+    return sorted(message_list, key=lambda msg: msg.created_at)
 
 
-def create_message(message: schemas.MessageCreate) -> models.Message:
-    if not models.Message.exists():
-        models.Message.create_table(read_capacity_units=1, write_capacity_units=1)
-
-    message = models.Message(
+async def create_message(message: schemas.MessageCreate) -> models.MessageTable:
+    model = models.MessageTable(
         id=str(uuid4()),
         channel=message.channel,
         body=message.body,
         created_at=datetime.now()
     )
-    message.save()
 
-    return message.attribute_values
-
-
-async def delete_channel_history(channel: str) -> json:
     try:
-        result = models.Message.query(channel)
+        model.save()
+        return model
+    except Exception as error:
+        raise error
+
+
+async def delete_channel_history(channel: str) -> str:
+    try:
+        result = models.MessageTable.query(channel)
     except Exception as error:
         raise error
 
     result_list = []
-    for message in result:
+    for model in result:
         try:
-            result_list.append(message.delete())
+            result_list.append(model.delete())
         except Exception as error:
             raise error
 
-    return {"messages_deleted": len(result_list)}
+    return json.dumps({"messages_deleted": len(result_list)})

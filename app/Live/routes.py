@@ -5,17 +5,14 @@ import logging
 
 from . import crud, schemas
 from ..utility import generate_unique_id
-from ..dependencies import get_ddb
-from .websockets import manager
+# from ..dependencies import get_ddb
+from .websockets import manager, BROADCAST_CHANNEL
 
 from boto3.resources.base import ServiceResource
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-BROADCAST_CHANNEL = 0
-
 
 router = APIRouter(
     prefix="/live",
@@ -39,22 +36,20 @@ async def websocket_broadcast(websocket: WebSocket):
 
 
 @router.websocket("/{channel}")
-async def websocket_endpoint(websocket: WebSocket, channel: int):
-    await manager.connect(channel, websocket)
+async def websocket_endpoint(websocket: WebSocket, channel: str):
+    await manager.connect(channel=channel, websocket=websocket)
 
     # When sockets connect, send them the current list of messages
-    message_list = crud.get_messages(channel)
+    message_list = await crud.get_messages(channel=channel)
     for message in message_list:
-        await websocket.send_text(message["body"])
-        print(message["body"])
+        await websocket.send_text(message.body)
     try:
         while True:
             data = await websocket.receive_text()
             await manager.broadcast(channel, data)
 
             # Create a new message in the database
-            msg = schemas.MessageCreate(channel=channel, body=data)
-            crud.create_message(msg)
+            await crud.create_message(message=schemas.MessageCreate(channel=channel, body=data))
 
     except WebSocketDisconnect:
         manager.disconnect(channel, websocket)
