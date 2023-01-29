@@ -4,7 +4,8 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from app.src.art_dynamodb.models import LayerTable
+from app.src.art.ddb_models import LayerTable
+from app.src.live.ddb_models import MessageTable
 
 
 @pytest.fixture(autouse=True)
@@ -13,14 +14,19 @@ def init_tables() -> Generator[None, None, None]:
         LayerTable.create_table(
             read_capacity_units=1, write_capacity_units=1, wait=True
         )
+
+    if not MessageTable.exists():
+        MessageTable.create_table(
+            read_capacity_units=1, write_capacity_units=1, wait=True
+        )
     yield
     LayerTable.delete_table()
+    MessageTable.delete_table()
 
 
 @pytest.fixture
 def app() -> FastAPI:
     from app.src.main import app as api_app
-
     return api_app
 
 

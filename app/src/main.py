@@ -5,12 +5,11 @@ from fastapi.responses import RedirectResponse
 
 # from .db_sql import Base, engine
 from .utility import update_schema_name, logger
+
 # from .user import routes as users
 from .admin import routes as admin
 from .live import routes as live
-
-# from .art import routes as art
-from .art_dynamodb import routes as art
+from .art import routes as art
 
 from mangum import Mangum
 
@@ -46,10 +45,6 @@ api.include_router(admin.router)
 api.include_router(live.router)
 
 # Manually set non-pydantic schema names
-# update_schema_name(api, art.create_vandalized_item, "FormVandalizedItem")
-# update_schema_name(api, art.create_base_item, "FormBaseItem")
-# update_schema_name(api, art.set_artwork_active, "FormActivateArtwork")
-
 update_schema_name(api.routes, art.submit_new_layer, "FormNewLayer")
 update_schema_name(api.routes, art.upload_base_layer, "FormBaseLayer")
 update_schema_name(api.routes, art.set_artwork_active, "FormActivate")
@@ -69,16 +64,12 @@ async def redirect():
     # Redirect to the docs route for now
     return RedirectResponse("/docs")
 
+# Add a sanity check route
 @api.get("/ping")
 def pong():
-    """
-    Sanity check.
-    This will let the user know that the service is operational.
-    And this path operation will:
-    * show a lifesign
-    """
     return {"ping": "pong!"}
 
+# Wrap the FastAPI instance for AWS Lambda
 handler = Mangum(api)
 
 # Add logging

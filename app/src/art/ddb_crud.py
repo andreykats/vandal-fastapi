@@ -1,5 +1,5 @@
 from pynamodb.exceptions import DoesNotExist, DeleteError, GetError, ScanError, QueryError, TableError, TableDoesNotExist
-from . import schemas, models
+from . import ddb_models as models, schemas
 import datetime
 from uuid import uuid4
 from enum import Enum

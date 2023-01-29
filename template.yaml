@@ -97,6 +97,7 @@ Resources:
   RestApi:
     Type: AWS::Serverless::Api
     Properties:
+      Name: fastapi
       StageName: stage
       # OpenApiVersion: "3.0.0"
 

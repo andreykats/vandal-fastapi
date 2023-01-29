@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 # from typing import List
 import logging
 
-from . import crud, schemas
+from . import ddb_crud as crud, schemas
 from ..utility import generate_unique_id
 # from ..dependencies import get_ddb
 from .websockets import manager, BROADCAST_CHANNEL

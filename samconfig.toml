@@ -3,7 +3,7 @@ version = 0.1
 [default.global.parameters]
 stack_name = "vandal-api-stack"
 
-# [default.deploy]
+[default.deploy]
 [default.deploy.parameters]
 stack_name = "vandal-api-staging"
 s3_bucket = "vandal-api-bucket"
