@@ -1,0 +1,15 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "vandal-api-stack"
+
+# [default.deploy]
+[default.deploy.parameters]
+stack_name = "vandal-api-staging"
+s3_bucket = "vandal-api-bucket"
+s3_prefix = "lambda-store"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+image_repositories = []
+# s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-dn0mme27b0hi"

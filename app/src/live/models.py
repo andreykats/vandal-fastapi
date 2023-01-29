@@ -9,8 +9,8 @@ import sys
 class BaseTable(Model):
     class Meta:
         host = config.DB_HOST if config.ENVIRONMENT in ["local", "test"] else None
-        region = config.AWS_REGION
-        aws_access_key_id = config.AWS_ACCESS_KEY_ID
+        region = config.AWS_REGION if config.ENVIRONMENT in ["test"] else None
+        aws_access_key_id = config.AWS_ACCESS_KEY_ID if config.ENVIRONMENT in ["test"] else None
 
 
 class MessageTable(BaseTable):
@@ -30,4 +30,4 @@ try:
     if not MessageTable.exists():
         MessageTable.create_table(wait=True)
 except Exception as e:
-    sys.exit("Database not available.")
+    print("Database not available.")

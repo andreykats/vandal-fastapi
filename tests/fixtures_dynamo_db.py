@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from app.art_dynamodb.models import LayerTable
+from app.src.art_dynamodb.models import LayerTable
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def init_tables() -> Generator[None, None, None]:
 
 @pytest.fixture
 def app() -> FastAPI:
-    from app.main import app as api_app
+    from app.src.main import app as api_app
 
     return api_app
 

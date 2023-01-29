@@ -3,15 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 
-from .db_sql import Base, engine
-from .utility import update_schema_name
-from .user import routes as users
+# from .db_sql import Base, engine
+from .utility import update_schema_name, logger
+# from .user import routes as users
 from .admin import routes as admin
 from .live import routes as live
 
 # from .art import routes as art
 from .art_dynamodb import routes as art
 
+from mangum import Mangum
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
@@ -40,7 +41,7 @@ api.add_middleware(
 
 # Add the individual service routers to the main api process
 api.include_router(art.router)
-api.include_router(users.router)
+# api.include_router(users.router)
 api.include_router(admin.router)
 api.include_router(live.router)
 
@@ -54,7 +55,7 @@ update_schema_name(api.routes, art.upload_base_layer, "FormBaseLayer")
 update_schema_name(api.routes, art.set_artwork_active, "FormActivate")
 
 # Add mounted directories serving static files
-api.mount("/images", StaticFiles(directory="images/"), name="images")
+# api.mount("/images", StaticFiles(directory="images/"), name="images")
 # api.mount("/", StaticFiles(directory="build/", html=True), name="build")
 
 
@@ -67,3 +68,18 @@ api.mount("/images", StaticFiles(directory="images/"), name="images")
 async def redirect():
     # Redirect to the docs route for now
     return RedirectResponse("/docs")
+
+@api.get("/ping")
+def pong():
+    """
+    Sanity check.
+    This will let the user know that the service is operational.
+    And this path operation will:
+    * show a lifesign
+    """
+    return {"ping": "pong!"}
+
+handler = Mangum(api)
+
+# Add logging
+handler = logger.inject_lambda_context(handler, clear_state=True)

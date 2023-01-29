@@ -8,7 +8,7 @@ from ..utility import generate_unique_id
 # from ..dependencies import get_ddb
 from .websockets import manager, BROADCAST_CHANNEL
 
-from boto3.resources.base import ServiceResource
+# from boto3.resources.base import ServiceResource
 
 
 logging.basicConfig(level=logging.INFO)

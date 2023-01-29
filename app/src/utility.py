@@ -1,9 +1,15 @@
 from fastapi.routing import APIRoute, BaseRoute
 from typing import Callable, cast
 
+from aws_lambda_powertools import Logger, Metrics, Tracer
+from aws_lambda_powertools.metrics import MetricUnit  # noqa: F401
+
+
+logger: Logger = Logger()
+# metrics: Metrics = Metrics()
+# tracer: Tracer = Tracer()
+
 # Clean up verbose function names in Client Generator
-
-
 def generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 

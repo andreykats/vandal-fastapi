@@ -3,15 +3,28 @@ Python API Service
 
 ## Requirements
 
-* Python 3.10
+* pyenv
+* Python 3.9
 * FastAPI
-* DynamoDB (PynamoDB)
+* Docker Desktop
+* AWS DynamoDB (PynamoDB)
+* AWS S3
+* AWS Lambda
+* AWS CloudFormation (SAM CLI)
+* AWS API Gateway
 
 
 ## Installation
 
 ```
 git clone git@github.com:andreykats/vandal-fastapi.git
+```
+
+### Set Python version:
+In the project directory, run:
+
+```
+pyenv install 3.9.16 && pyenv local 3.9.16
 ```
 
 ### Initialize virtual environment:
@@ -33,7 +46,14 @@ source .venv/bin/activate
 In the project directory, run:
 
 ```
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+### Start database container:
+In the project directory, run:
+
+```
+docker-compose up -d
 ```
 
 ## Running
@@ -49,11 +69,18 @@ source .venv/bin/activate
 ### Start on localhost:
 In the project directory, run:
 ```
-python run.py
+python app/run.py
 ```
 
 ## Admin
-Update requirements file when installing new packages:
 ```
-pip3 freeze > requirements.txt
+pip freeze > requirements.txt
+
+pip freeze | xargs pip uninstall -y
+
+sam build && sam local start-api
+
+sam delete [stack-name]
+
+
 ```

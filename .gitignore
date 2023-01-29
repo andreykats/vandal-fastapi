@@ -27,7 +27,9 @@ share/python-wheels/
 MANIFEST
 .venv/
 .pytest_cache/
+.mypy_cache/
 .vscode/
+.aws-sam/
 
 # Database
 *.db
