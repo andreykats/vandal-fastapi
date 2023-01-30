@@ -2,7 +2,19 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Vandal API Service
 
+Outputs:
+  ApiUrl:
+    Description: URL of the API
+    Value:
+      Fn::Sub: "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/stage"
 Resources:
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: fastapi
+      StageName: stage
+      # OpenApiVersion: "3.0.0"
+      
   Function:
     Type: AWS::Serverless::Function
     Properties:
@@ -94,15 +106,3 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
-  RestApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: fastapi
-      StageName: stage
-      # OpenApiVersion: "3.0.0"
-
-Outputs:
-  ApiUrl:
-    Description: URL of the API
-    Value:
-      Fn::Sub: "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/stage"

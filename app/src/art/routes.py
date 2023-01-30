@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from pynamodb.exceptions import DoesNotExist, DeleteError, GetError, ScanError, QueryError, TableError, TableDoesNotExist
 
-from . import ddb_crud, files, sample_data, schemas
+from . import ddb_crud as crud, files, sample_data, schemas
 from ..utility import generate_unique_id
 # from ..dependencies import get_ddb
 from ..live import ddb_crud as live_crud, websockets
 
 import logging
-import datetime
-import os
-import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,37 +19,39 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=list[schemas.LayerSchema])
-async def create_layers(body: list[schemas.LayerCreateSchema]):
+@router.post("/", response_model=list[schemas.Layer])
+async def create_layers(body: list[schemas.LayerCreate]):
     try:
         layer_list = []
         for layer in body:
-            layer_list.append(await ddb_crud.create_layer(schema=layer))
+            model = await crud.create_layer(layer)
+            layer_list.append(schemas.Layer(**model.attribute_values))
         return layer_list
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.post("/submit", response_model=schemas.ArtworkSchema)
+@router.post("/submit", response_model=schemas.Artwork)
 async def submit_new_layer(layer_id: str = Form(...), user_id: str = Form(...), image_data: str = Form(...)):
     try:
-        model = await ddb_crud.set_layer_active(layer_id=layer_id, is_active=False)
+        model = await crud.set_layer_active(layer_id=layer_id, is_active=False)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
-        new_layer = await ddb_crud.create_layer(schemas.LayerCreateSchema(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
+        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error), "X-Error-Name": "create_layer"})
 
     try:
         file_name = (new_layer.id + ".jpg").replace(" ", "_")
-        await files.save_image_data(file_name=file_name, image_data=image_data)
+        print(file_name)
+        await files.save_image_data_to_s3(file_name=file_name, image_data=image_data)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error), "X-Error-Name": "save_image_data"})
 
     try:
-        artwork = await ddb_crud.get_artwork_from_layer(layer=new_layer)
+        artwork = await crud.get_artwork_from_layer(layer=new_layer)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error))
 
@@ -64,16 +63,16 @@ async def submit_new_layer(layer_id: str = Form(...), user_id: str = Form(...), 
     return artwork
 
 
-@router.post("/upload", response_model=schemas.LayerSchema)
+@router.post("/upload", response_model=schemas.Layer)
 async def upload_base_layer(art_name: str = Form(...), artist_name: str = Form(...), user_id: str = Form(...), image_width: int = Form(...), image_height: int = Form(...), image_file: UploadFile = File(...)):
     try:
-        new_layer = await ddb_crud.create_layer(schemas.LayerCreateSchema(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
+        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
         file_name = (new_layer.id + ".jpg").replace(" ", "_")
-        await files.save_image_file(file_name=file_name, image_file=image_file.file)
+        await files.save_image_file_to_s3(file_name=file_name, image_file=image_file.file)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
@@ -85,15 +84,15 @@ async def upload_base_layer(art_name: str = Form(...), artist_name: str = Form(.
     return new_layer
 
 
-@router.post("/activate", response_model=schemas.ArtworkSchema)
+@router.post("/activate", response_model=schemas.Artwork)
 async def set_artwork_active(layer_id: str = Form(...), is_active: bool = Form(...)):
     try:
-        model = await ddb_crud.set_layer_active(layer_id=layer_id, is_active=is_active)
+        model = await crud.set_layer_active(layer_id=layer_id, is_active=is_active)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
-        artwork = await ddb_crud.get_artwork_from_layer(layer=model)
+        artwork = await crud.get_artwork_from_layer(layer=model)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
@@ -112,65 +111,66 @@ async def set_artwork_active(layer_id: str = Form(...), is_active: bool = Form(.
     return artwork
 
 
-@router.post("/populate", response_model=list[schemas.LayerSchema])
+@router.post("/populate", response_model=list[schemas.Layer])
 async def populate_base_layers():
     try:
         layer_list = []
         for layer in sample_data.starting_layers:
-            layer_list.append(await ddb_crud.create_layer(schemas.LayerCreateSchema(**layer)))
+            model = await crud.create_layer(schemas.LayerCreate(**layer))
+            layer_list.append(schemas.Layer(**model.attribute_values))
         return layer_list
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.get("/base", response_model=list[schemas.LayerSchema])
+@router.get("/base", response_model=list[schemas.Layer])
 async def get_all_base_layers(rate_limit: int = 15):
     try:
-        return await ddb_crud.get_all_base_layers(rate_limit=rate_limit)
+        return await crud.get_all_base_layers(rate_limit=rate_limit)
     except ScanError as error:
         raise HTTPException(status_code=404, detail=str(error), headers={"X-Error": str(error)})
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.get("/created", response_model=list[schemas.LayerSchema])
+@router.get("/created", response_model=list[schemas.Layer])
 async def get_all_created_layers(rate_limit: int = 15):
     try:
-        return await ddb_crud.get_all_created_layers(rate_limit=rate_limit)
+        return await crud.get_all_created_layers(rate_limit=rate_limit)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.get("/latest", response_model=list[schemas.ArtworkSchema])
+@router.get("/latest", response_model=list[schemas.Artwork])
 async def get_latest_artworks():
     try:
-        return await ddb_crud.get_latest_artworks()
+        return await crud.get_latest_artworks()
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.get("/{layer_id}", response_model=schemas.ArtworkSchema)
+@router.get("/{layer_id}", response_model=schemas.Artwork)
 async def get_artwork(layer_id: str):
     try:
-        return await ddb_crud.get_artwork_from_id(layer_id=layer_id)
+        return await crud.get_artwork_from_id(layer_id=layer_id)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.delete("/{layer_id}", response_model=schemas.LayerSchema)
+@router.delete("/{layer_id}", response_model=schemas.Layer)
 async def delete_created_content(layer_id: str):
     try:
-        layer = await ddb_crud.delete_layer(layer_id=layer_id)
+        layer = await crud.delete_layer(layer_id=layer_id)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
         # Delete stored image file
         if layer.file_name:
-            await files.delete_file(file_name=layer.file_name)
+            await files.delete_file_from_disk(file_name=layer.file_name)
         else:
             file_name = (layer.id + ".jpg").replace(" ", "_")
-            await files.delete_file(file_name=file_name)
+            await files.delete_file_from_disk(file_name=file_name)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
@@ -182,10 +182,10 @@ async def delete_created_content(layer_id: str):
     return layer
 
 
-@router.get("/{layer_id}/history", response_model=list[schemas.ArtworkSchema])
+@router.get("/{layer_id}/history", response_model=list[schemas.Artwork])
 async def get_artwork_history(layer_id: str):
     try:
-        return await ddb_crud.get_artwork_history(layer_id=layer_id)
+        return await crud.get_artwork_history(layer_id=layer_id)
     except QueryError as error:
         raise HTTPException(status_code=404, detail=str(error), headers={"X-Error": str(error)})
     except Exception as error:

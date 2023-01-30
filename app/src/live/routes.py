@@ -3,6 +3,11 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 # from typing import List
 import logging
 
+import asyncio
+
+
+from sse_starlette.sse import EventSourceResponse
+
 from . import ddb_crud as crud, schemas
 from ..utility import generate_unique_id
 # from ..dependencies import get_ddb
@@ -14,11 +19,51 @@ from .websockets import manager, BROADCAST_CHANNEL
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+MESSAGE_STREAM_DELAY = 1  # second
+MESSAGE_STREAM_RETRY_TIMEOUT = 15000  # milisecond
+
 router = APIRouter(
     prefix="/live",
     tags=["live"],
     generate_unique_id_function=generate_unique_id
 )
+
+COUNTER = 0
+
+def get_message():
+    global COUNTER
+    COUNTER += 1
+    return COUNTER, COUNTER < 21
+
+@router.get("/stream")
+async def message_stream(request: Request):
+    async def event_generator():
+        while True:
+            if await request.is_disconnected():
+                print("Request disconnected")
+                break
+
+            # Checks for new messages and return them to client if any
+            counter, exists = get_message()
+            if exists:
+                yield {
+                    "event": "new_message",
+                    "id": "message_id",
+                    "retry": MESSAGE_STREAM_RETRY_TIMEOUT,
+                    "data": f"Counter value {counter}",
+                }
+            else:
+                yield {
+                    "event": "end_event",
+                    "id": "message_id",
+                    "retry": MESSAGE_STREAM_RETRY_TIMEOUT,
+                    "data": "End of the stream",
+                }
+
+            await asyncio.sleep(MESSAGE_STREAM_DELAY)
+
+    return EventSourceResponse(event_generator())
 
 
 @router.websocket("/")
@@ -61,18 +106,20 @@ def dyanamodb_admin():
 
 
 @router.post("/", response_model=list[schemas.Message])
-def create_messages(items: list[schemas.MessageCreate]):
-    message_list = []
-    for x in items:
-        message = crud.create_message(message=x)
-        message_list.append(message)
-
-    return message_list
+async def create_messages(body: list[schemas.MessageCreate]):
+    try:
+        message_list = []
+        for message in body:
+            model = await crud.create_message(message=message)
+            message_list.append(schemas.Message(**model.attribute_values))
+        return message_list
+    except Exception as error:
+        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
 @router.get("/{channel}", response_model=list[schemas.Message])
-def get_messages(channel: str):
-    message_list = crud.get_messages(channel)
+async def get_messages(channel: str):
+    message_list = await crud.get_messages(channel)
     return message_list
 
 
@@ -176,3 +223,32 @@ async def websocket_chat():
 
 # async def get_redis_pool():
 #     return await aioredis.from_url(f'redis://localhost', encoding="utf-8", decode_responses=True)
+
+async def status_event_generator(request, param1):
+    previous_status = None
+    while True:
+        if await request.is_disconnected():
+            logger.debug('Request disconnected')
+            break
+
+        if previous_status and previous_status['some_end_condition']:
+            logger.debug('Request completed. Disconnecting now')
+            yield {
+                "event": "end",
+                "data" : ''
+            }
+            break
+
+        current_status = await compute_status(param1)
+        if previous_status != current_status:
+            yield {
+                "event": "update",
+                "retry": status_stream_retry_timeout,
+                "data": current_status
+            }
+            previous_status = current_status
+            logger.debug('Current status :%s', current_status)
+        else:
+            logger.debug('No change in status...')
+
+        await asyncio.sleep(status_stream_delay)

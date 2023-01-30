@@ -25,14 +25,16 @@ description = """
 api = FastAPI(
     title="Vandal REST API",
     description=description,
-    version="0.0.2"
+    version="0.0.2",
+    openapi_url="/openapi.json",
+    root_path="/"
 )
 
 # Add CORS handling. For dev everything is set to open
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:3000'],
     allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -25,14 +25,21 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.venv/
+
+# cache
 .pytest_cache/
 .mypy_cache/
-.vscode/
-.aws-sam/
 
 # Database
 *.db
 
 # misc
 .DS_Store
+
+# local environments
+.venv/
+.vscode/
+.aws-sam/
+
+# environment variables
+.env
