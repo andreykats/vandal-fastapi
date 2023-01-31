@@ -5,13 +5,16 @@ from fastapi.responses import RedirectResponse
 
 # from .db_sql import Base, engine
 from .utility import update_schema_name, logger
-
 # from .user import routes as users
 from .admin import routes as admin
 from .live import routes as live
 from .art import routes as art
 
 from mangum import Mangum
+from dotenv import load_dotenv
+from os import environ
+
+load_dotenv()
 
 description = """
 ### FastAPI based backend providing a REST API 🚀
@@ -21,13 +24,18 @@ description = """
 * **Switch database from SQLite to PostgreSQL**.
 """
 
+root_path = "/" + environ.get('VANDAL_ENV', "")
+
+print(f"Setting root_path to:  {root_path}")
+logger.debug(f"Setting root_path to: {root_path}")
+
 # Create a FastAPI instance
 api = FastAPI(
     title="Vandal REST API",
     description=description,
     version="0.0.2",
     openapi_url="/openapi.json",
-    root_path="/"
+    root_path= root_path,
 )
 
 # Add CORS handling. For dev everything is set to open
@@ -69,7 +77,7 @@ async def redirect():
 # Add a sanity check route
 @api.get("/ping")
 def pong():
-    return {"ping": "pong!"}
+    return "pong"
 
 # Wrap the FastAPI instance for AWS Lambda
 handler = Mangum(api)

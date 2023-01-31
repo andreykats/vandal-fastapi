@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse
-# from typing import List
+from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
+from typing import Iterator,AsyncIterator
 import logging
 
 import asyncio
+import json
 
-
-from sse_starlette.sse import EventSourceResponse
+# from sse_starlette.sse import EventSourceResponse
 
 from . import ddb_crud as crud, schemas
 from ..utility import generate_unique_id
@@ -19,7 +19,6 @@ from .websockets import manager, BROADCAST_CHANNEL
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 MESSAGE_STREAM_DELAY = 1  # second
 MESSAGE_STREAM_RETRY_TIMEOUT = 15000  # milisecond
 
@@ -30,41 +29,53 @@ router = APIRouter(
 )
 
 COUNTER = 0
-
-def get_message():
+def get_message_for_channel():
     global COUNTER
     COUNTER += 1
-    return COUNTER, COUNTER < 21
+    return COUNTER, COUNTER < 1000
+
+async def event_generator(request: Request) -> AsyncIterator[str]:
+    while True:
+        if await request.is_disconnected():
+            print("Request disconnected")
+            break
+
+        # Checks for new messages and return them to client if any
+        counter, exists = get_message_for_channel()
+        if exists:
+            yield json.dumps({
+                "event": "new_message",
+                "id": "message_id",
+                "retry": MESSAGE_STREAM_RETRY_TIMEOUT,
+                "data": f"Counter value {counter}",
+            })
+        else:
+            yield json.dumps({
+                "event": "end_event",
+                "id": "message_id",
+                "retry": MESSAGE_STREAM_RETRY_TIMEOUT,
+                "data": "End of the stream",
+            })
+        await asyncio.sleep(MESSAGE_STREAM_DELAY)
 
 @router.get("/stream")
 async def message_stream(request: Request):
-    async def event_generator():
-        while True:
-            if await request.is_disconnected():
-                print("Request disconnected")
-                break
+    response = StreamingResponse(event_generator(request), media_type="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
-            # Checks for new messages and return them to client if any
-            counter, exists = get_message()
-            if exists:
-                yield {
-                    "event": "new_message",
-                    "id": "message_id",
-                    "retry": MESSAGE_STREAM_RETRY_TIMEOUT,
-                    "data": f"Counter value {counter}",
-                }
-            else:
-                yield {
-                    "event": "end_event",
-                    "id": "message_id",
-                    "retry": MESSAGE_STREAM_RETRY_TIMEOUT,
-                    "data": "End of the stream",
-                }
+@router.post("/stream", response_model=list[schemas.Message])
+async def create_messages_test(body: list[schemas.MessageCreate]):
+    try:
+        message_list = []
+        for message in body:
+            model = await crud.create_message(message=message)
+            message_list.append(schemas.Message(**model.attribute_values))
 
-            await asyncio.sleep(MESSAGE_STREAM_DELAY)
-
-    return EventSourceResponse(event_generator())
-
+        return message_list
+    except Exception as error:
+        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 @router.websocket("/")
 # Broadcast message to all websocket connections
@@ -119,9 +130,11 @@ async def create_messages(body: list[schemas.MessageCreate]):
 
 @router.get("/{channel}", response_model=list[schemas.Message])
 async def get_messages(channel: str):
-    message_list = await crud.get_messages(channel)
-    return message_list
-
+    try:
+        message_list = await crud.get_messages(channel)
+        return message_list
+    except Exception as error:
+        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 @router.delete("/{channel}")
 async def delete_channel_content(channel: str):
@@ -224,31 +237,31 @@ async def websocket_chat():
 # async def get_redis_pool():
 #     return await aioredis.from_url(f'redis://localhost', encoding="utf-8", decode_responses=True)
 
-async def status_event_generator(request, param1):
-    previous_status = None
-    while True:
-        if await request.is_disconnected():
-            logger.debug('Request disconnected')
-            break
+# async def status_event_generator(request, param1):
+#     previous_status = None
+#     while True:
+#         if await request.is_disconnected():
+#             logger.debug('Request disconnected')
+#             break
 
-        if previous_status and previous_status['some_end_condition']:
-            logger.debug('Request completed. Disconnecting now')
-            yield {
-                "event": "end",
-                "data" : ''
-            }
-            break
+#         if previous_status and previous_status['some_end_condition']:
+#             logger.debug('Request completed. Disconnecting now')
+#             yield {
+#                 "event": "end",
+#                 "data" : ''
+#             }
+#             break
 
-        current_status = await compute_status(param1)
-        if previous_status != current_status:
-            yield {
-                "event": "update",
-                "retry": status_stream_retry_timeout,
-                "data": current_status
-            }
-            previous_status = current_status
-            logger.debug('Current status :%s', current_status)
-        else:
-            logger.debug('No change in status...')
+#         current_status = await compute_status(param1)
+#         if previous_status != current_status:
+#             yield {
+#                 "event": "update",
+#                 "retry": status_stream_retry_timeout,
+#                 "data": current_status
+#             }
+#             previous_status = current_status
+#             logger.debug('Current status :%s', current_status)
+#         else:
+#             logger.debug('No change in status...')
 
-        await asyncio.sleep(status_stream_delay)
+#         await asyncio.sleep(status_stream_delay)

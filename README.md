@@ -105,5 +105,16 @@ sam build && sam local start-api
 
 sam delete [stack-name]
 
+sam build --template template-dev.yaml && sam local start-api -p 8080
+
+sam build --template template-stage.yaml && sam deploy --template template-stage.yaml --config-env staging
+
+sam deploy --template template-stage.yaml
+
+sam deploy --config-env staging
+
+sam deploy --template template-stage.yaml --config-env staging
+
+sam build --template template-stage.yaml && sam deploy --config-env staging
 
 ```

@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Vandal API Service
+
+Outputs:
+  ApiUrl:
+    Description: URL of the API
+    Value:
+      Fn::Sub: "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/stage"
+Resources:
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: fastapi
+      StageName: stage
+      # OpenApiVersion: "3.0.0"
+
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: fastapi
+      Description: FastAPI process in AWS Lamda
+      MemorySize: 128
+      CodeUri: ./app
+      Handler: src.main.handler
+      Runtime: python3.9
+      Timeout: 300
+      Policies: AmazonDynamoDBFullAccess
+      # Policies:
+      #   - DynamoDBCrudPolicy:
+      #       TableName: !Ref layer-table
+      #   - DynamoDBCrudPolicy:
+      #       TableName: !Ref websocket-history-table
+      Environment:
+        Variables:
+          DB_HOST: "http://docker.for.mac.localhost:8000/"
+      #     TABLE_NAME_LAYER: !Ref layer-table
+      #     TABLE_NAME_HISTORU: !Ref websocket-history-table
+      Events:
+        DefaultEndpoint:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Path: /{proxy+}
+            Method: ANY
+      # Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fastapilambdarole
+
+  LayerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: layer-table
+      AttributeDefinitions:
+        - AttributeName: created_at
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: layer_type
+          AttributeType: S
+        - AttributeName: base_layer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      # BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      GlobalSecondaryIndexes:
+        - IndexName: layer_type_index
+          KeySchema:
+            - AttributeName: layer_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+        - IndexName: base_layer_id_index
+          KeySchema:
+            - AttributeName: base_layer_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  MessageTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: websocket-history-table
+      AttributeDefinitions:
+        - AttributeName: channel
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: channel
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      # BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1

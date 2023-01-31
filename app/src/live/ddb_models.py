@@ -3,14 +3,12 @@ from pynamodb.attributes import UnicodeAttribute, NumberAttribute, UTCDateTimeAt
 
 from ..db_dynamo import config
 
-import sys
-
 
 class BaseTable(Model):
     class Meta:
-        host = config.DB_HOST if config.ENVIRONMENT in ["local", "test"] else None
-        region = config.AWS_REGION if config.ENVIRONMENT in ["local"] else None
-        aws_access_key_id = config.AWS_ACCESS_KEY_ID if config.ENVIRONMENT in ["local"] else None
+        host = config.DB_HOST
+        region = config.AWS_REGION
+        aws_access_key_id = config.AWS_ACCESS_KEY_ID
 
 
 class MessageTable(BaseTable):
