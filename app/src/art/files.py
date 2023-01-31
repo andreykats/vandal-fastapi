@@ -6,10 +6,6 @@ import typing
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 
-ACCESS_KEY = 'AKIAVNGMWN72PYV3Z25H'
-SECRET_KEY = '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'
-BUCKET_NAME = 'vandal-images-bucket-stage'
-
 async def save_image_data_to_disk(file_name: str, image_data: str) -> str:
     try:
         # Convert string to bytes

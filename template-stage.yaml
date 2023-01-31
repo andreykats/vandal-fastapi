@@ -34,7 +34,6 @@ Resources:
       Environment:
         Variables:
           VANDAL_ENV: stage
-          VANDAL_ENV_NAME: undefined
       #     TABLE_NAME_LAYER: !Ref layer-table
       #     TABLE_NAME_HISTORU: !Ref websocket-history-table
       Events:
