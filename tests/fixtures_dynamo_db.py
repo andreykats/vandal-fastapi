@@ -4,8 +4,8 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from app.src.art.ddb_models import LayerTable
-from app.src.live.ddb_models import MessageTable
+from app.src.art.models_ddb import LayerTable
+from app.src.live.models_ddb import MessageTable
 
 
 @pytest.fixture(autouse=True)

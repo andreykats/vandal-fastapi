@@ -1,4 +1,4 @@
-from . import schemas, ddb_models as models
+from . import models_ddb as models, schemas
 from uuid import uuid4
 from datetime import datetime
 import json

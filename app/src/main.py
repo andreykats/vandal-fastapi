@@ -24,10 +24,19 @@ description = """
 * **Switch database from SQLite to PostgreSQL**.
 """
 
-root_path = "/" + environ.get('VANDAL_ENV', "")
 
-print(f"Setting root_path to:  {root_path}")
-logger.debug(f"Setting root_path to: {root_path}")
+# Set the root path for the environment
+if "dev" in environ.get('VANDAL_ENV', ""):
+    root_path = "/"
+elif "stage" in environ.get('VANDAL_ENV', ""):
+    root_path = "/stage"
+elif "prod" in environ.get('VANDAL_ENV', ""):
+    root_path = "/prod"
+else:
+    raise ValueError("VANDAL_ENV not set")
+
+# print(f"Setting root_path to:  {root_path}")
+# logger.debug(f"Setting root_path to: {root_path}")
 
 # Create a FastAPI instance
 api = FastAPI(

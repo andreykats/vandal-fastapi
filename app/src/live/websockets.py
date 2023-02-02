@@ -2,7 +2,7 @@ from fastapi import WebSocket
 from typing import List
 import json
 
-from . import ddb_crud as crud, schemas
+from . import crud_ddb as crud, schemas
 
 BROADCAST_CHANNEL = "0"
 

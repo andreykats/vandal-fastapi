@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from pynamodb.exceptions import DoesNotExist, DeleteError, GetError, ScanError, QueryError, TableError, TableDoesNotExist
 
-from . import ddb_crud as crud, files, sample_data, schemas
+from . import crud_ddb as crud, files, schemas
 from ..utility import generate_unique_id
 # from ..dependencies import get_ddb
-from ..live import ddb_crud as live_crud, websockets
+from ..live import crud_ddb as live_crud, websockets
 
 import logging
 
@@ -19,7 +19,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=list[schemas.Layer])
+@router.post("/create", response_model=list[schemas.Layer])
 async def create_layers(body: list[schemas.LayerCreate]):
     try:
         layer_list = []
@@ -111,18 +111,6 @@ async def set_artwork_active(layer_id: str = Form(...), is_active: bool = Form(.
     return artwork
 
 
-@router.post("/populate", response_model=list[schemas.Layer])
-async def populate_base_layers():
-    try:
-        layer_list = []
-        for layer in sample_data.starting_layers:
-            model = await crud.create_layer(schemas.LayerCreate(**layer))
-            layer_list.append(schemas.Layer(**model.attribute_values))
-        return layer_list
-    except Exception as error:
-        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
-
-
 @router.get("/base", response_model=list[schemas.Layer])
 async def get_all_base_layers(rate_limit: int = 15):
     try:
@@ -149,7 +137,7 @@ async def get_latest_artworks():
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.get("/{layer_id}", response_model=schemas.Artwork)
+@router.get("/get/{layer_id}", response_model=schemas.Artwork)
 async def get_artwork(layer_id: str):
     try:
         return await crud.get_artwork_from_id(layer_id=layer_id)
@@ -157,7 +145,17 @@ async def get_artwork(layer_id: str):
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.delete("/{layer_id}", response_model=schemas.Layer)
+@router.get("/history/{layer_id}", response_model=list[schemas.Artwork])
+async def get_artwork_history(layer_id: str):
+    try:
+        return await crud.get_artwork_history(layer_id=layer_id)
+    except QueryError as error:
+        raise HTTPException(status_code=404, detail=str(error), headers={"X-Error": str(error)})
+    except Exception as error:
+        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
+
+
+@router.delete("/delete/{layer_id}", response_model=schemas.Layer)
 async def delete_created_content(layer_id: str):
     try:
         layer = await crud.delete_layer(layer_id=layer_id)
@@ -180,13 +178,3 @@ async def delete_created_content(layer_id: str):
         pass
 
     return layer
-
-
-@router.get("/{layer_id}/history", response_model=list[schemas.Artwork])
-async def get_artwork_history(layer_id: str):
-    try:
-        return await crud.get_artwork_history(layer_id=layer_id)
-    except QueryError as error:
-        raise HTTPException(status_code=404, detail=str(error), headers={"X-Error": str(error)})
-    except Exception as error:
-        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})

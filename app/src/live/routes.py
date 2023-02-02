@@ -8,7 +8,7 @@ import json
 
 # from sse_starlette.sse import EventSourceResponse
 
-from . import ddb_crud as crud, schemas
+from . import crud_ddb as crud, schemas
 from ..utility import generate_unique_id
 # from ..dependencies import get_ddb
 from .websockets import manager, BROADCAST_CHANNEL

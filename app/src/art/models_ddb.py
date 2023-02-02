@@ -2,7 +2,7 @@ from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, NumberAttribute, UTCDateTimeAttribute, BooleanAttribute
 from pynamodb.indexes import GlobalSecondaryIndex, AllProjection, KeysOnlyProjection
 
-from ..db_dynamo import config
+from ..config import config
 
 
 class BaseTable(Model):
@@ -41,7 +41,7 @@ class LayerTypeIndex(GlobalSecondaryIndex):
 
 class LayerTable(BaseTable):
     class Meta(BaseTable.Meta):
-        table_name = "layer-table"
+        table_name = config.DB_TABLE_LAYERS
         read_capacity_units = 1
         write_capacity_units = 1
 
