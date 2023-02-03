@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM Template for Nested application resources
+
+Parameters:
+  ENV:
+    Type: String
+    Default: "stage"
+
+Resources:
+  RestApi:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: template-api-rest.yaml
+      Parameters:
+        ENV: !Ref ENV
+        TABLELAYERS: !Sub "vandal-artwork-layers-${ENV}"
+        TABLEMESSAGES: !Sub "vandal-websocket-messages-${ENV}"
+        BUCKETIMAGES: !Sub "vandal-images-bucket-${ENV}"
+
+  WebsocketApi:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: template-api-websocket.yaml
+      Parameters:
+        ENV: !Ref ENV
+        TABLEMESSAGES: !Sub "vandal-websocket-messages-${ENV}"
+        TABLECONNECTIONS: !Sub "vandal-websocket-connections-${ENV}"
+    DependsOn: RestApi
+
+Outputs:
+  RestApiUrl:
+    Description: REST API URL
+    Value: !GetAtt RestApi.Outputs.ApiUrl
+
+  WebsocketApiUri:
+    Description: Websocket API URI
+    Value: !GetAtt WebsocketApi.Outputs.WebSocketURI

@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-table = boto3.resource('dynamodb').Table(environ.get('TABLE_NAME'))
+table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_CONNECTIONS'))
 
 def handler(event: dict, context: LambdaContext) -> dict:
     connection_id = event.get('requestContext', {}).get('connectionId')

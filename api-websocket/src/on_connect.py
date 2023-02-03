@@ -6,12 +6,12 @@ from botocore.exceptions import ClientError
 import json
 import logging
 
-import schemas
+from . import schemas
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-connections_table = boto3.resource('dynamodb').Table(environ.get('TABLE_NAME'))
+connections_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_CONNECTIONS'))
 messages_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_MESSAGES'))
 
 def handler(event: dict, context: LambdaContext) -> dict:

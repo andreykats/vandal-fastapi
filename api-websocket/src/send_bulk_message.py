@@ -23,7 +23,7 @@ logger.setLevel(logging.INFO)
 ############################################################################################################
 
 BROADCAST_CHANNEL = '0'
-connections_table = boto3.resource('dynamodb').Table(environ.get('TABLE_NAME'))
+connections_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_CONNECTIONS'))
 
 def handler(event: dict, context: LambdaContext) -> dict:
     # logger.info(f"Event: {event}")

@@ -3,4 +3,4 @@
 # HEADER
 #================================================================
 
-sam build --template template-stage.yaml && sam deploy --config-env staging
+sam build --template template.yaml && sam deploy --config-env staging

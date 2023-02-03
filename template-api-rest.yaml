@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: REST API for Vandal
+
+Parameters:
+  ENV:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - stage
+      - prod
+
+  TABLELAYERS:
+    Type: String
+    Default: vandal-artwork-layers-dev
+
+  TABLEMESSAGES:
+    Type: String
+    Default: vandal-websocket-messages-dev
+
+  BUCKETIMAGES:
+    Type: String
+    Default: vandal-images-bucket-dev
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub RestApiFunction-${ENV}
+      Description: FastAPI process in AWS Lamda
+      MemorySize: 128
+      CodeUri: api-rest/
+      Handler: src.main.handler
+      Runtime: python3.9
+      Timeout: 300
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLELAYERS
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
+      Environment:
+        Variables:
+          VANDAL_ENV: !Ref ENV
+          DB_TABLE_LAYERS: !Ref TABLELAYERS
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+          S3_BUCKET_IMAGES: !Ref BUCKETIMAGES
+      Events:
+        DefaultEndpoint:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /{proxy+}
+            Method: ANY
+
+  LayerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TABLELAYERS
+      AttributeDefinitions:
+        - AttributeName: created_at
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: layer_type
+          AttributeType: S
+        - AttributeName: base_layer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      # BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      GlobalSecondaryIndexes:
+        - IndexName: layer_type_index
+          KeySchema:
+            - AttributeName: layer_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+        - IndexName: base_layer_id_index
+          KeySchema:
+            - AttributeName: base_layer_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "RestApiGateway-${ENV}"
+      StageName: !Ref ENV
+
+Outputs:
+  ApiUrl:
+    Description: URL of the API
+    Value:
+      Fn::Sub: "https://${ApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ENV}"
+    Export:
+      Name: ApiUrl
