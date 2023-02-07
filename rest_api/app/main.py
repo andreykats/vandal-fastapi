@@ -26,14 +26,14 @@ description = """
 
 
 # Set the root path for the environment
-if "dev" in environ.get('VANDAL_ENV', ""):
+if "dev" in environ.get('ENV', "").lower():
     root_path = "/"
-elif "stage" in environ.get('VANDAL_ENV', ""):
+elif "stage" in environ.get('ENV', "").lower():
     root_path = "/stage"
-elif "prod" in environ.get('VANDAL_ENV', ""):
+elif "prod" in environ.get('ENV', "").lower():
     root_path = "/prod"
 else:
-    raise ValueError("VANDAL_ENV not set")
+    raise ValueError("ENV not set")
 
 # print(f"Setting root_path to:  {root_path}")
 # logger.debug(f"Setting root_path to: {root_path}")

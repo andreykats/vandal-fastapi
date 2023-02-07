@@ -14,6 +14,8 @@ logger.setLevel(logging.INFO)
 connections_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_CONNECTIONS'))
 messages_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_MESSAGES'))
 
+BULK_SEND_MESSAGE_FUNCTION = "VANDAL-Stage-bulkSendMessageFunction"
+
 def handler(event: dict, context: LambdaContext) -> dict:
     # logger.info(f"Event: {event}")
     channel_id: str = event.get('queryStringParameters', {'channel': '0'}).get('channel')
@@ -63,7 +65,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
     
     client = boto3.client('lambda')
     try:
-        client.invoke(FunctionName='BulkSendMessageFunction', InvocationType='Event', Payload=json.dumps(event))
+        client.invoke(FunctionName=BULK_SEND_MESSAGE_FUNCTION, InvocationType='Event', Payload=json.dumps(event))
     except Exception as error:
         logger.exception(f"Couldn't invoke SendMessageFunction. Error: {error}")
         return {'statusCode': 500, 'body': 'Failed to send message '}

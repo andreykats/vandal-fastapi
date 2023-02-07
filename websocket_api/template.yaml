@@ -3,12 +3,16 @@ Transform: AWS::Serverless-2016-10-31
 Description: Websocket API for Vandal
 
 Parameters:
+  PROJECT:
+    Type: String
+    Default: VANDAL
+
   ENV:
     Type: String
-    Default: stage
     AllowedValues:
-      - stage
-      - prod
+      - Dev
+      - Stage
+      - Prod
 
   TABLEMESSAGES:
     Type: String
@@ -21,14 +25,15 @@ Globals:
     Runtime: python3.9
     MemorySize: 128
     Timeout: 300
-    CodeUri: api-websocket/
+    CodeUri: .
 
 Resources:
-  OnConnectFunction:
+  onConnectFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: "OnConnectFunction"
-      Handler: src.on_connect.handler
+      FunctionName: !Sub "${PROJECT}-${ENV}-onConnectFunction"
+      Description: WebSocket connect handler
+      Handler: app.on_connect.handler
       Environment:
         Variables:
           DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
@@ -43,27 +48,28 @@ Resources:
               Action:
                 - "execute-api:ManageConnections"
               Resource:
-                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SimpleChatWebSocket}/*"
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
             - Effect: Allow
               Action:
                 - "lambda:InvokeFunction"
               Resource:
-                - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:BulkSendMessageFunction"
+                - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${bulkSendMessageFunction}"
 
-  OnConnectPermission:
+  onConnectPermission:
     Type: AWS::Lambda::Permission
     DependsOn:
-      - SimpleChatWebSocket
+      - ApiGateway
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref OnConnectFunction
+      FunctionName: !Ref onConnectFunction
       Principal: apigateway.amazonaws.com
 
-  OnDisconnectFunction:
+  onDisconnectFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: "OnDisconnectFunction"
-      Handler: src.on_disconnect.handler
+      FunctionName: !Sub ${PROJECT}-${ENV}-onDisconnectFunction
+      Description: WebSocket disconnect handler
+      Handler: app.on_disconnect.handler
       Environment:
         Variables:
           DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
@@ -71,20 +77,21 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref TABLECONNECTIONS
 
-  OnDisconnectPermission:
+  onDisconnectPermission:
     Type: AWS::Lambda::Permission
     DependsOn:
-      - SimpleChatWebSocket
+      - ApiGateway
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref OnDisconnectFunction
+      FunctionName: !Ref onDisconnectFunction
       Principal: apigateway.amazonaws.com
 
-  SendMessageFunction:
+  sendMessageFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: "SendMessageFunction"
-      Handler: src.send_message.handler
+      FunctionName: !Sub ${PROJECT}-${ENV}-sendMessageFunction
+      Description: WebSocket send message handler
+      Handler: app.send_message.handler
       Environment:
         Variables:
           DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
@@ -99,22 +106,23 @@ Resources:
               Action:
                 - "execute-api:ManageConnections"
               Resource:
-                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SimpleChatWebSocket}/*"
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
 
-  SendMessagePermission:
+  sendMessagePermission:
     Type: AWS::Lambda::Permission
     DependsOn:
-      - SimpleChatWebSocket
+      - ApiGateway
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref SendMessageFunction
+      FunctionName: !Ref sendMessageFunction
       Principal: apigateway.amazonaws.com
 
-  BulkSendMessageFunction:
+  bulkSendMessageFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: "BulkSendMessageFunction"
-      Handler: src.send_bulk_message.handler
+      FunctionName: !Sub ${PROJECT}-${ENV}-bulkSendMessageFunction
+      Description: WebSocket bulk send messages handler
+      Handler: app.send_bulk_message.handler
       Environment:
         Variables:
           DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
@@ -126,18 +134,18 @@ Resources:
               Action:
                 - "execute-api:ManageConnections"
               Resource:
-                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SimpleChatWebSocket}/*"
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
 
-  BulkSendMessagePermission:
+  bulkSendMessagePermission:
     Type: AWS::Lambda::Permission
     DependsOn:
-      - SimpleChatWebSocket
+      - ApiGateway
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref BulkSendMessageFunction
+      FunctionName: !Ref bulkSendMessageFunction
       Principal: apigateway.amazonaws.com
 
-  ConnectionsTable:
+  WebSocketConnectionsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Ref TABLECONNECTIONS
@@ -184,17 +192,17 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
-  SimpleChatWebSocket:
+  ApiGateway:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: SimpleChatWebSocket
+      Name: !Sub ${PROJECT}-${ENV}-WebsocketApiGateway
       ProtocolType: WEBSOCKET
       RouteSelectionExpression: "$request.body.action"
 
   ConnectRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
       RouteKey: $connect
       AuthorizationType: NONE
       OperationName: ConnectRoute
@@ -206,16 +214,16 @@ Resources:
   ConnectInteg:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
       Description: Connect Integration
       IntegrationType: AWS_PROXY
       IntegrationUri:
-        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnConnectFunction.Arn}/invocations
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${onConnectFunction.Arn}/invocations
 
   DisconnectRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
       RouteKey: $disconnect
       AuthorizationType: NONE
       OperationName: DisconnectRoute
@@ -227,16 +235,16 @@ Resources:
   DisconnectInteg:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
       Description: Disconnect Integration
       IntegrationType: AWS_PROXY
       IntegrationUri:
-        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnDisconnectFunction.Arn}/invocations
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${onDisconnectFunction.Arn}/invocations
 
   SendRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
       RouteKey: sendmessage
       AuthorizationType: NONE
       OperationName: SendRoute
@@ -248,11 +256,11 @@ Resources:
   SendInteg:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
       Description: Send Integration
       IntegrationType: AWS_PROXY
       IntegrationUri:
-        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendMessageFunction.Arn}/invocations
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sendMessageFunction.Arn}/invocations
 
   Deployment:
     Type: AWS::ApiGatewayV2::Deployment
@@ -261,7 +269,7 @@ Resources:
       - SendRoute
       - DisconnectRoute
     Properties:
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
 
   Stage:
     Type: AWS::ApiGatewayV2::Stage
@@ -269,28 +277,28 @@ Resources:
       StageName: !Ref ENV
       Description: Stage
       DeploymentId: !Ref Deployment
-      ApiId: !Ref SimpleChatWebSocket
+      ApiId: !Ref ApiGateway
 
 Outputs:
-  ConnectionsTableArn:
-    Description: "Connections table ARN"
-    Value: !GetAtt ConnectionsTable.Arn
+  WebSocketConnectionsTableArn:
+    Description: "WebSocket connections table ARN"
+    Value: !GetAtt WebSocketConnectionsTable.Arn
 
-  OnConnectFunctionArn:
-    Description: "OnConnect function ARN"
-    Value: !GetAtt OnConnectFunction.Arn
+  onConnectFunctionArn:
+    Description: "Websocket onConnect function ARN"
+    Value: !GetAtt onConnectFunction.Arn
 
-  OnDisconnectFunctionArn:
-    Description: "OnDisconnect function ARN"
-    Value: !GetAtt OnDisconnectFunction.Arn
+  onDisconnectFunctionArn:
+    Description: "Websocket onDisconnect function ARN"
+    Value: !GetAtt onDisconnectFunction.Arn
 
-  SendMessageFunctionArn:
-    Description: "SendMessage function ARN"
-    Value: !GetAtt SendMessageFunction.Arn
+  sendMessageFunctionArn:
+    Description: "Websocket sendMessage function ARN"
+    Value: !GetAtt sendMessageFunction.Arn
 
-  BulkSendMessageFunctionArn:
-    Description: "BulkSendMessage function ARN"
-    Value: !GetAtt BulkSendMessageFunction.Arn
+  bulkSendMessageFunctionArn:
+    Description: "Websocket bulkSendMessage function ARN"
+    Value: !GetAtt bulkSendMessageFunction.Arn
 
   WebSocketURI:
     Description: "The WSS Protocol URI to connect to"
@@ -299,7 +307,7 @@ Outputs:
         "",
         [
           "wss://",
-          !Ref SimpleChatWebSocket,
+          !Ref ApiGateway,
           ".execute-api.",
           !Ref "AWS::Region",
           ".amazonaws.com/",

@@ -47,7 +47,7 @@ Resources:
             TableName: !Ref TABLEMESSAGES
       Environment:
         Variables:
-          VANDAL_ENV: !Ref ENV
+          ENV: !Ref ENV
           DB_TABLE_LAYERS: !Ref TABLELAYERS
           DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
           S3_BUCKET_IMAGES: !Ref BUCKETIMAGES

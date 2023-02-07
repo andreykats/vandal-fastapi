@@ -3,4 +3,4 @@
 # HEADER
 #================================================================
 
-sam build --template template.yaml && sam deploy --config-env staging
+sam build && sam local start-api --port 8080 --warm-containers EAGER

@@ -1,14 +1,13 @@
 version = 0.1
 
-[default.global.parameters]
-stack_name = "vandal-api-stack"
-
+# [default.global.parameters]
 # [default.deploy]
 # [default.deploy.parameters]
+
 [staging.deploy]
 [staging.deploy.parameters]
-stack_name = "vandal-api-stack-stage"
-s3_bucket = "vandal-api-bucket-stage"
+stack_name = "VANDAL-Stage-ApiStack"
+s3_bucket = "vandal-stage-api-bucket"
 s3_prefix = "sam-cli-store"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"

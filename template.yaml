@@ -1,32 +1,35 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  SAM Template for Nested application resources
+Description: SAM Template for Nested application resources
 
 Parameters:
+  PROJECT:
+    Type: String
+    Default: VANDAL
+
   ENV:
     Type: String
-    Default: "stage"
+    Default: "Stage"
 
 Resources:
   RestApi:
     Type: AWS::Serverless::Application
     Properties:
-      Location: template-api-rest.yaml
+      Location: rest_api/template.yaml
       Parameters:
         ENV: !Ref ENV
-        TABLELAYERS: !Sub "vandal-artwork-layers-${ENV}"
-        TABLEMESSAGES: !Sub "vandal-websocket-messages-${ENV}"
-        BUCKETIMAGES: !Sub "vandal-images-bucket-${ENV}"
+        TABLELAYERS: !Sub "${PROJECT}-${ENV}-ArtworkLayersTable"
+        TABLEMESSAGES: !Sub "${PROJECT}-${ENV}-WebsocketMessagesTable"
+        BUCKETIMAGES: !Sub "${PROJECT}-${ENV}-images-bucket"
 
-  WebsocketApi:
+  WebSocketApi:
     Type: AWS::Serverless::Application
     Properties:
-      Location: template-api-websocket.yaml
+      Location: websocket_api/template.yaml
       Parameters:
         ENV: !Ref ENV
-        TABLEMESSAGES: !Sub "vandal-websocket-messages-${ENV}"
-        TABLECONNECTIONS: !Sub "vandal-websocket-connections-${ENV}"
+        TABLEMESSAGES: !Sub "${PROJECT}-${ENV}-WebsocketMessagesTable"
+        TABLECONNECTIONS: !Sub "${PROJECT}-${ENV}-WebsocketConnectionsTable"
     DependsOn: RestApi
 
 Outputs:
@@ -34,6 +37,6 @@ Outputs:
     Description: REST API URL
     Value: !GetAtt RestApi.Outputs.ApiUrl
 
-  WebsocketApiUri:
-    Description: Websocket API URI
-    Value: !GetAtt WebsocketApi.Outputs.WebSocketURI
+  WebSocketApiUri:
+    Description: WebSocket API URI
+    Value: !GetAtt WebSocketApi.Outputs.WebSocketURI

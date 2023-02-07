@@ -4,7 +4,6 @@ Vandal Backend API Service
 ## Requirements
 ### Local
 * pyenv
-* autoenv
 * Python 3.9.16
 * Docker Desktop
 

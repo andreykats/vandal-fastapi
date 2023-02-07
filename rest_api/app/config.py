@@ -9,7 +9,7 @@ import typing
 # from sqlalchemy.orm import sessionmaker
 
 class GlobalConfig(BaseSettings):
-    VANDAL_ENV: typing.Optional[str] = environ.get('VANDAL_ENV')
+    ENV: typing.Optional[str] = environ.get('ENV')
 
 # class GlobalDBCconfig(GlobalConfig):
     # SQLALCHEMY_DATABASE_URL = "sqlite:///./sqlite.db"
@@ -26,7 +26,8 @@ class GlobalAWSConfig(GlobalConfig):
     AWS_ACCESS_KEY_ID: typing.Optional[str] = environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY: typing.Optional[str] = environ.get('AWS_SECRET_ACCESS_KEY')
     S3_HOST: typing.Optional[str] = environ.get('S3_HOST')
-    S3_BUCKET_IMAGES: typing.Optional[str] = environ.get('S3_BUCKET_IMAGES')
+    S3_BUCKET_IMAGES: typing.Optional[str] = environ.get('S3_BUCKET_IMAGES', '').lower()
+    
     DB_HOST: typing.Optional[str] = environ.get('DB_HOST')
     DB_TABLE_LAYERS: typing.Optional[str] = environ.get('DB_TABLE_LAYERS')
     DB_TABLE_MESSAGES: typing.Optional[str] = environ.get('DB_TABLE_MESSAGES')

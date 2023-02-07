@@ -1,55 +1,66 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Vandal API Service
+Description: REST API for Vandal
 
-Outputs:
-  ApiUrl:
-    Description: URL of the API
-    Value:
-      Fn::Sub: "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${VANDAL_ENV}"
+Parameters:
+  PROJECT:
+    Type: String
+    Default: VANDAL
+
+  ENV:
+    Type: String
+    Default: Stage
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+
+  TABLELAYERS:
+    Type: String
+    Default: VANDAL-Stage-ArtworkLayersTable
+
+  TABLEMESSAGES:
+    Type: String
+    Default: VANDAL-Stage-WebsocketMessagesTable
+
+  BUCKETIMAGES:
+    Type: String
+    Default: VANDAL-Stage-images-bucket
 
 Resources:
-  RestApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: fastapi
-      StageName: !Ref VANDAL_ENV
-
-  Function:
+  restApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: fastapi
-      Description: FastAPI process in AWS Lamda
+      FunctionName: !Sub ${PROJECT}-${ENV}-restApiFunction
+      Description: FastAPI with Mangum handler
       MemorySize: 128
-      CodeUri: ./app
-      Handler: src.main.handler
+      CodeUri: .
+      Handler: app.main.handler
       Runtime: python3.9
       Timeout: 300
-      Policies: AmazonDynamoDBFullAccess
-      # Policies:
-      #   - DynamoDBCrudPolicy:
-      #       TableName: !Ref layer-table
-      #   - DynamoDBCrudPolicy:
-      #       TableName: !Ref websocket-history-table
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLELAYERS
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
       Environment:
         Variables:
-          VANDAL_ENV: stage
-          DB_TABLE_LAYERS: layer-table
-          DB_TABLE_MESSAGES: websocket-history-table
-          S3_BUCKET_IMAGES: vandal-images-bucket-stage
+          ENV: !Ref ENV
+          DB_TABLE_LAYERS: !Ref TABLELAYERS
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+          S3_BUCKET_IMAGES: !Ref BUCKETIMAGES
       Events:
         DefaultEndpoint:
           Type: Api
           Properties:
-            RestApiId: !Ref RestApi
+            RestApiId: !Ref ApiGateway
             Path: /{proxy+}
             Method: ANY
-      # Role: !Sub arn:aws:iam::${AWS::AccountId}:role/fastapilambdarole
 
-  LayerTable:
+  LayersTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Ref DB_TABLE_LAYERS
+      TableName: !Ref TABLELAYERS
       AttributeDefinitions:
         - AttributeName: created_at
           AttributeType: S
@@ -90,21 +101,17 @@ Resources:
             ReadCapacityUnits: 1
             WriteCapacityUnits: 1
 
-  MessageTable:
-    Type: AWS::DynamoDB::Table
+  ApiGateway:
+    Type: AWS::Serverless::Api
     Properties:
-      TableName: !Ref DB_TABLE_MESSAGES
-      AttributeDefinitions:
-        - AttributeName: channel
-          AttributeType: S
-        - AttributeName: created_at
-          AttributeType: S
-      KeySchema:
-        - AttributeName: channel
-          KeyType: HASH
-        - AttributeName: created_at
-          KeyType: RANGE
-      # BillingMode: PAY_PER_REQUEST
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+      Name: !Sub ${PROJECT}-${ENV}-RestApiGateway
+      StageName: !Ref ENV
+      OpenApiVersion: "3.0.2"
+
+Outputs:
+  ApiUrl:
+    Description: URL of the API
+    Value:
+      Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ENV}
+    Export:
+      Name: ApiUrl
