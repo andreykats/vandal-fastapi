@@ -3,4 +3,4 @@
 # HEADER
 #================================================================
 
-sam build && sam deploy --config-env staging
+sam build && sam deploy
