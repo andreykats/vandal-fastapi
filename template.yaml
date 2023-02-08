@@ -12,6 +12,15 @@ Parameters:
     Default: "Stage"
 
 Resources:
+  WebSocketApi:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: websocket_api/template.yaml
+      Parameters:
+        ENV: !Ref ENV
+        TABLEMESSAGES: !Sub "${PROJECT}-${ENV}-WebsocketMessagesTable"
+        TABLECONNECTIONS: !Sub "${PROJECT}-${ENV}-WebsocketConnectionsTable"
+
   RestApi:
     Type: AWS::Serverless::Application
     Properties:
@@ -21,22 +30,14 @@ Resources:
         TABLELAYERS: !Sub "${PROJECT}-${ENV}-ArtworkLayersTable"
         TABLEMESSAGES: !Sub "${PROJECT}-${ENV}-WebsocketMessagesTable"
         BUCKETIMAGES: !Sub "${PROJECT}-${ENV}-images-bucket"
-
-  WebSocketApi:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: websocket_api/template.yaml
-      Parameters:
-        ENV: !Ref ENV
-        TABLEMESSAGES: !Sub "${PROJECT}-${ENV}-WebsocketMessagesTable"
-        TABLECONNECTIONS: !Sub "${PROJECT}-${ENV}-WebsocketConnectionsTable"
-    DependsOn: RestApi
+        WEBSOCKETURI: !GetAtt WebSocketApi.Outputs.WebSocketURI
+    DependsOn: WebSocketApi
 
 Outputs:
-  RestApiUrl:
-    Description: REST API URL
-    Value: !GetAtt RestApi.Outputs.ApiUrl
-
   WebSocketApiUri:
     Description: WebSocket API URI
     Value: !GetAtt WebSocketApi.Outputs.WebSocketURI
+
+  RestApiUrl:
+    Description: REST API URL
+    Value: !GetAtt RestApi.Outputs.ApiUrl

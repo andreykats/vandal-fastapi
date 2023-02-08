@@ -1,7 +1,7 @@
-from . import models_ddb as models, schemas
+from . import models
+from . import schemas
 from uuid import uuid4
 from datetime import datetime
-import json
 
 # -----------------------
 # DynamoDB CRUD functions

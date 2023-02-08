@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, __version__ as fastapi_version
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+
 
 # from .db_sql import Base, engine
 from .utility import update_schema_name, logger
@@ -15,16 +16,6 @@ from dotenv import load_dotenv
 from os import environ
 
 load_dotenv()
-
-description = """
-### FastAPI based backend providing a REST API 🚀
-
-### To Do:
-* **Set up JWT based authentication**.
-* **Switch database from SQLite to PostgreSQL**.
-"""
-
-
 # Set the root path for the environment
 if "dev" in environ.get('ENV', "").lower():
     root_path = "/"
@@ -39,11 +30,14 @@ else:
 # logger.debug(f"Setting root_path to: {root_path}")
 
 # Create a FastAPI instance
+title = "VANDAL REST API"
+description = f"""
+### FastAPI based backend providing a REST API 🚀
+"""
 api = FastAPI(
-    title="Vandal REST API",
+    title=title,
     description=description,
-    version="0.0.2",
-    openapi_url="/openapi.json",
+    version=fastapi_version,
     root_path= root_path,
 )
 

@@ -54,6 +54,11 @@ Resources:
                 - "lambda:InvokeFunction"
               Resource:
                 - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${bulkSendMessageFunction}"
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource:
+                - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${sendMessageFunction}"
 
   onConnectPermission:
     Type: AWS::Lambda::Permission
@@ -249,8 +254,8 @@ Resources:
       AuthorizationType: NONE
       OperationName: SendRoute
       Target: !Join
-        - "/"
-        - - "integrations"
+        - /
+        - - integrations
           - !Ref SendInteg
 
   SendInteg:

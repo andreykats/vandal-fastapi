@@ -1,10 +1,11 @@
 from aws_lambda_powertools.utilities.parser import BaseModel
+from pydantic.schema import Optional
 
 class Message(BaseModel):
-    id: str
-    channel: str
+    id: Optional[str]
+    channel: Optional[str]
     body: str
-    created_at: str
+    created_at: Optional[str]
 
 class Payload(BaseModel):
     channel: str

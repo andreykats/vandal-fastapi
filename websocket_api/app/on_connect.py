@@ -13,7 +13,9 @@ logger.setLevel(logging.INFO)
 
 connections_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_CONNECTIONS'))
 messages_table = boto3.resource('dynamodb').Table(environ.get('DB_TABLE_MESSAGES'))
+client = boto3.client('lambda')
 
+SEND_MESSAGE_FUNCTION = "VANDAL-Stage-sendMessageFunction"
 BULK_SEND_MESSAGE_FUNCTION = "VANDAL-Stage-bulkSendMessageFunction"
 
 def handler(event: dict, context: LambdaContext) -> dict:
@@ -27,13 +29,40 @@ def handler(event: dict, context: LambdaContext) -> dict:
     except ClientError:
         logger.exception(f"Couldn't add connection_id: {connection_id} for channel_id: {channel_id}")
         return {'statusCode': 503, 'body': 'Failed to connect : '}
+    
+    send_welcome_message(channel_id=channel_id, connection_id=connection_id, event=event)
+    send_message_history(channel_id=channel_id, event=event)
 
+    return {'statusCode': 200, 'body': 'Connected'}
+
+
+def send_welcome_message(channel_id: str, connection_id: str, event: dict):
+    welcome_msg = schemas.Body(
+        payload=schemas.SinglePayload(
+            channel=channel_id, 
+            message=schemas.Message(
+                body=f"Welcome, {connection_id}!"
+            )
+        )
+    )
+    outgoing_event = event
+    outgoing_event["body"] = json.dumps(welcome_msg.dict())
+
+    try:
+        client.invoke(FunctionName=SEND_MESSAGE_FUNCTION, InvocationType='Event', Payload=json.dumps(outgoing_event))
+    except Exception as error:
+        logger.exception(f"Couldn't invoke {SEND_MESSAGE_FUNCTION}. Error: {error}")
+        raise error
+
+    return True
+
+def send_message_history(channel_id: str, event: dict):
     try:
         response = messages_table.query(KeyConditionExpression=Key('channel').eq(channel_id))
         # logger.info(f"Query response: {response['Items']}")
     except ClientError:
         logger.exception("Couldn not query messeges table")
-        return {'statusCode': 404, 'body': "Couldn not query messeges table" }   
+        raise ClientError
 
     # body: {
     #     "action":"bulksendmessage", 
@@ -52,7 +81,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
     # body["payload"]["channel"] = channel_id
     # body["payload"]["messages"] = sorted(response['Items'], key=lambda msg: msg["created_at"])
 
-    body = schemas.BulkBody(
+    message_history = schemas.BulkBody(
         payload=schemas.BulkPayload(
             channel=channel_id, 
             messages=sorted(response['Items'], key=lambda msg: msg["created_at"])
@@ -60,14 +89,14 @@ def handler(event: dict, context: LambdaContext) -> dict:
     )
     
     # Replace event body with new body
-    event["body"] = json.dumps(body.dict())
+    outgoing_event = event
+    outgoing_event["body"] = json.dumps(message_history.dict())
     # event["body"] = json.dumps(body)
     
-    client = boto3.client('lambda')
     try:
-        client.invoke(FunctionName=BULK_SEND_MESSAGE_FUNCTION, InvocationType='Event', Payload=json.dumps(event))
+        client.invoke(FunctionName=BULK_SEND_MESSAGE_FUNCTION, InvocationType='Event', Payload=json.dumps(outgoing_event))
     except Exception as error:
-        logger.exception(f"Couldn't invoke SendMessageFunction. Error: {error}")
-        return {'statusCode': 500, 'body': 'Failed to send message '}
+        logger.exception(f"Couldn't invoke {BULK_SEND_MESSAGE_FUNCTION}. Error: {error}")
+        raise error
         
-    return {'statusCode': 200, 'body': 'Connected'}
+    return True

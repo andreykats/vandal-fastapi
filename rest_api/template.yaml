@@ -27,6 +27,9 @@ Parameters:
     Type: String
     Default: VANDAL-Stage-images-bucket
 
+  WEBSOCKETURI:
+    Type: String
+
 Resources:
   restApiFunction:
     Type: AWS::Serverless::Function
@@ -49,6 +52,7 @@ Resources:
           DB_TABLE_LAYERS: !Ref TABLELAYERS
           DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
           S3_BUCKET_IMAGES: !Ref BUCKETIMAGES
+          WEBSOCKET_URI: !Ref WEBSOCKETURI
       Events:
         DefaultEndpoint:
           Type: Api
