@@ -1,12 +1,12 @@
-from fastapi import FastAPI, __version__ as fastapi_version
+from fastapi import FastAPI, __version__ as fastapi_version, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 
-
-# from .db_sql import Base, engine
 from .utility import update_schema_name, logger
-# from .user import routes as users
+from .user import routes as users
 from .admin import routes as admin
 from .live import routes as live
 from .art import routes as art
@@ -15,14 +15,15 @@ from mangum import Mangum
 from dotenv import load_dotenv
 from os import environ
 
+
 load_dotenv()
 # Set the root path for the environment
 if "dev" in environ.get('ENV', "").lower():
     root_path = "/"
 elif "stage" in environ.get('ENV', "").lower():
-    root_path = "/stage"
+    root_path = "/Stage"
 elif "prod" in environ.get('ENV', "").lower():
-    root_path = "/prod"
+    root_path = "/Prod"
 else:
     raise ValueError("ENV not set")
 
@@ -53,9 +54,9 @@ api.add_middleware(
 
 # Add the individual service routers to the main api process
 api.include_router(art.router)
-# api.include_router(users.router)
-api.include_router(admin.router)
+api.include_router(users.router)
 api.include_router(live.router)
+api.include_router(admin.router)
 
 # Manually set non-pydantic schema names
 update_schema_name(api.routes, art.submit_new_layer, "FormNewLayer")
@@ -67,19 +68,27 @@ update_schema_name(api.routes, art.set_artwork_active, "FormActivate")
 # api.mount("/", StaticFiles(directory="build/", html=True), name="build")
 
 
+# @api.exception_handler(RequestValidationError)
+# async def validation_exception_handler(request: Request, exc: RequestValidationError):
+#     return JSONResponse(
+#         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+#         content=jsonable_encoder({"detail": exc.errors(), "Error": "Name field is missing"}),
+#     )
+
+
 # Run database migration
 # Base.metadata.create_all(bind=engine)
 
 
 # Specify the root route
-@api.get("/")
-async def redirect():
-    # Redirect to the docs route for now
-    return RedirectResponse("/docs")
+# @api.get("/")
+# async def redirect():
+#     # Redirect to the docs route for now
+#     return RedirectResponse("/docs")
 
 # Add a sanity check route
 @api.get("/ping")
-def pong():
+def ping() -> str:
     return "pong"
 
 # Wrap the FastAPI instance for AWS Lambda

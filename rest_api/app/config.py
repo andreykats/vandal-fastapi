@@ -27,13 +27,18 @@ class GlobalAWSConfig(GlobalConfig):
     AWS_SECRET_ACCESS_KEY: typing.Optional[str] = environ.get('AWS_SECRET_ACCESS_KEY')
     
     S3_HOST: typing.Optional[str] = environ.get('S3_HOST')
-    S3_BUCKET_IMAGES: typing.Optional[str] = environ.get('S3_BUCKET_IMAGES', '').lower()
+    S3_BUCKET_IMAGES: str = environ.get('S3_BUCKET_IMAGES', '').lower()
     
     DB_HOST: typing.Optional[str] = environ.get('DB_HOST')
     DB_TABLE_LAYERS: typing.Optional[str] = environ.get('DB_TABLE_LAYERS')
     DB_TABLE_MESSAGES: typing.Optional[str] = environ.get('DB_TABLE_MESSAGES')
+    DB_TABLE_USERS: typing.Optional[str] = environ.get('DB_TABLE_USERS')
 
-    WEBSOCKET_URI: typing.Optional[str] = environ.get('WEBSOCKET_URI', '')
+    WEBSOCKET_URI: str = environ.get('WEBSOCKET_URI', '')
+    
+    USERPOOL_ID: str = environ.get('USERPOOL_ID', '')
+    APP_CLIENT_ID: str = environ.get('APP_CLIENT_ID', '')
+    APP_CLIENT_SECRET: str = environ.get('APP_CLIENT_SECRET', '')
 
 
 config = GlobalAWSConfig()

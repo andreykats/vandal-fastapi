@@ -11,12 +11,12 @@ router = APIRouter(
 )
 
 @router.get("/env")
-async def environment_variables():
+async def environment_variables() -> dict:
     # Redirect to the docs route for now
     return dict(os.environ)
 
 
-@router.get("/")
-async def redirect():
-    # Redirect to the docs route for now
-    return RedirectResponse("/docs")
+# @router.get("/")
+# async def redirect():
+#     # Redirect to the docs route for now
+#     return RedirectResponse("/docs")

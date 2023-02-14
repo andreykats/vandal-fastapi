@@ -23,12 +23,21 @@ Parameters:
     Type: String
     Default: VANDAL-Stage-WebsocketMessagesTable
 
+  TABLEUSERS:
+    Type: String
+    Default: VANDAL-Stage-UsersTable
+
   BUCKETIMAGES:
     Type: String
     Default: VANDAL-Stage-images-bucket
 
   WEBSOCKETURI:
     Type: String
+
+  ADMINSGROUP:
+    Type: String
+    Description: Cognito group name for Administrators
+    Default: admins
 
 Resources:
   restApiFunction:
@@ -46,6 +55,8 @@ Resources:
             TableName: !Ref TABLELAYERS
         - DynamoDBCrudPolicy:
             TableName: !Ref TABLEMESSAGES
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEUSERS
       Environment:
         Variables:
           ENV: !Ref ENV
@@ -53,6 +64,9 @@ Resources:
           DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
           S3_BUCKET_IMAGES: !Ref BUCKETIMAGES
           WEBSOCKET_URI: !Ref WEBSOCKETURI
+          USERPOOL_ID: !Ref CognitoUserPool
+          APP_CLIENT_ID: !Ref UserPoolClient
+          DB_TABLE_USERS: !Ref TABLEUSERS
       Events:
         DefaultEndpoint:
           Type: Api
@@ -60,6 +74,9 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /{proxy+}
             Method: ANY
+            Auth:
+              # FastAPI app is responsible for auth, not AWS
+              Authorizer: NONE
 
   LayersTable:
     Type: AWS::DynamoDB::Table
@@ -105,17 +122,105 @@ Resources:
             ReadCapacityUnits: 1
             WriteCapacityUnits: 1
 
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TABLEUSERS
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${PROJECT}-${ENV}-CognitoUserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      Policies:
+        PasswordPolicy:
+          RequireLowercase: true
+          RequireSymbols: false
+          RequireNumbers: true
+          MinimumLength: 8
+          RequireUppercase: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+
+  CognitoUserPoolGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: !Ref ADMINSGROUP
+      Description: Administrators Group
+      UserPoolId: !Ref CognitoUserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${PROJECT}-${ENV}-CognitoUserPoolClient
+      GenerateSecret: true
+      UserPoolId: !Ref CognitoUserPool
+      SupportedIdentityProviders:
+        - COGNITO
+      PreventUserExistenceErrors: ENABLED
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+      ReadAttributes:
+        - email
+        - email_verified
+      WriteAttributes:
+        - email
+
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub ${PROJECT}-${ENV}-RestApiGateway
       StageName: !Ref ENV
       OpenApiVersion: "3.0.2"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+            Identity: # OPTIONAL
+              Header: Authorization # OPTIONAL; Default: 'Authorization'
 
 Outputs:
   ApiUrl:
-    Description: URL of the API
+    Description: API Gateway endpoint URL
     Value:
       Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ENV}
     Export:
       Name: ApiUrl
+
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: CognitoUserPoolId
+
+  CognitoAppClientId:
+    Description: Cognito App Client ID
+    Value: !Ref UserPoolClient
+    Export:
+      Name: CognitoAppClientId

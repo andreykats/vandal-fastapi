@@ -96,7 +96,7 @@ python app/run.py
 
 ## Admin
 ```
-pip freeze > requirements.txt
+pip freeze > requirements-dev.txt
 
 pip freeze | xargs pip uninstall -y
 
