@@ -63,7 +63,7 @@ def create_cognito_user(username: str, password: str) -> str:
     try:
         response = client.sign_up(
             ClientId=config.APP_CLIENT_ID,
-            SecretHash=get_secret_hash(username),
+            # SecretHash=get_secret_hash(username),
             Username=username,
             Password=password,
             UserAttributes=[

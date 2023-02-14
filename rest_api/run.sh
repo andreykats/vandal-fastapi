@@ -16,7 +16,7 @@ export S3_BUCKET_IMAGES=${PROJECT:l}-${ENV:l}-images-bucket # lowercase project 
 
 export USERPOOL_ID=us-east-1_tBBZkCDfG
 export APP_CLIENT_ID=2h9tgeepqoh3ae3hjqkkf2btte
-export APP_CLIENT_SECRET=157quigo4ns20j9kt02454efm6ob12tfun866du74pkagkkf7o8k
+# export APP_CLIENT_SECRET=157quigo4ns20j9kt02454efm6ob12tfun866du74pkagkkf7o8k
 
 aws --endpoint-url=$S3_HOST s3 mb s3://$S3_BUCKET_IMAGES &&
 aws --endpoint-url=$S3_HOST s3 sync ../_sample_data s3://$S3_BUCKET_IMAGES &&

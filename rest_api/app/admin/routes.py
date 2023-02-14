@@ -10,10 +10,10 @@ router = APIRouter(
     generate_unique_id_function=generate_unique_id
 )
 
-@router.get("/env")
-async def environment_variables() -> dict:
-    # Redirect to the docs route for now
-    return dict(os.environ)
+# @router.get("/env")
+# async def environment_variables() -> dict:
+#     # Redirect to the docs route for now
+#     return dict(os.environ)
 
 
 # @router.get("/")

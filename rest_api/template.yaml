@@ -175,7 +175,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: !Sub ${PROJECT}-${ENV}-CognitoUserPoolClient
-      GenerateSecret: true
+      GenerateSecret: false
       UserPoolId: !Ref CognitoUserPool
       SupportedIdentityProviders:
         - COGNITO

@@ -4,6 +4,7 @@ from typing import Iterator, AsyncIterator
 
 from . import schemas, crud
 from ..config import config
+from .. import auth
 from ..utility import generate_unique_id
 
 # from ..dependencies import get_ddb
@@ -21,8 +22,8 @@ router = APIRouter(
 )
 
 
-@router.post("/create", response_model=list[schemas.Message])
-async def create_messages(body: list[schemas.MessageCreate]):
+@router.post("/create", dependencies=[Depends(auth.admin)])
+async def create_messages(body: list[schemas.MessageCreate]) -> list[schemas.Message]:
     try:
         message_list = []
         for message in body:
@@ -33,8 +34,8 @@ async def create_messages(body: list[schemas.MessageCreate]):
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.get("/get/{channel}", response_model=list[schemas.Message])
-async def get_messages(channel: str):
+@router.get("/get/{channel}")
+async def get_messages(channel: str) -> list[schemas.Message]:
     try:
         message_list = await crud.get_messages(channel)
         return message_list
@@ -42,7 +43,7 @@ async def get_messages(channel: str):
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.delete("/delete/{channel}")
+@router.delete("/delete/{channel}", dependencies=[Depends(auth.admin)])
 async def delete_channel_content(channel: str):
     try:
         result = await crud.delete_channel_history(channel=channel)
