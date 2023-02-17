@@ -62,6 +62,8 @@ api.include_router(admin.router)
 update_schema_name(api.routes, art.submit_new_layer, "FormNewLayer")
 update_schema_name(api.routes, art.upload_base_layer, "FormBaseLayer")
 update_schema_name(api.routes, art.set_artwork_active, "FormActivate")
+update_schema_name(api.routes, users.login, "FormLogin")
+update_schema_name(api.routes, users.signup, "FormSignup")
 
 # Add mounted directories serving static files
 # api.mount("/images", StaticFiles(directory="images/"), name="images")

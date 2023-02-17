@@ -37,7 +37,7 @@ def initiate_cognito_auth(username: str, password: str) -> dict:
             AuthFlow='ADMIN_NO_SRP_AUTH',
             AuthParameters={
                 'USERNAME': username,
-                'SECRET_HASH': secret_hash,
+                # 'SECRET_HASH': secret_hash,
                 'PASSWORD': password,
             },
             # ClientMetadata={
@@ -55,6 +55,7 @@ def initiate_cognito_auth(username: str, password: str) -> dict:
         print("Exception: " + error.__str__())
         raise HTTPException(status_code=400, detail=error.__str__())
 
+    # return response
     return {"access_token": response["AuthenticationResult"]["AccessToken"], "token_type": "bearer"}
 
 
@@ -104,13 +105,18 @@ def download_public_keys():
     # we download them only on cold start
     # https://aws.amazon.com/blogs/compute/container-reuse-in-lambda/
     keys_url = 'https://cognito-idp.{}.amazonaws.com/{}/.well-known/jwks.json'.format(config.AWS_REGION, config.USERPOOL_ID)
-    with urllib.request.urlopen(keys_url) as f:
-        response = f.read()
+    try:
+        with urllib.request.urlopen(keys_url) as f:
+            response = f.read()
+    except Exception as error:
+        print('Error downloading public keys: ' + error.__str__())
+        return None
+        # raise HTTPException(status_code=401, detail="Error downloading public keys")
+
     keys = json.loads(response.decode('utf-8'))['keys']
     return keys
 
 public_keys = download_public_keys()
-
 
 async def verify_jwt(token: str, scopes: list, keys = public_keys):
     # Attempt to decode the token header
@@ -122,6 +128,10 @@ async def verify_jwt(token: str, scopes: list, keys = public_keys):
     # Get the kid from the headers prior to verification.
     # The kid is a hint that indicates which key was used to secure the JSON web signature (JWS) of the token.     
     kid = headers['kid']
+
+    if not keys:
+        print('Public keys not found')
+        raise HTTPException(status_code=401, detail="Public keys not found")
 
     # Search for the kid in the downloaded public keys
     key_index = -1
@@ -181,3 +191,6 @@ async def user(token: str = Depends(oauth2_scheme)):
         return await verify_jwt(token=token, scopes=["users", "admins"])
     except Exception as error:
         raise error
+
+if __name__ == "__main__":
+    print("create_cognito_user")

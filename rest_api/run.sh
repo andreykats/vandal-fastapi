@@ -14,8 +14,8 @@ export DB_TABLE_USERS=${PROJECT}-${ENV}-UsersTable
 export S3_HOST=http://localhost:4566
 export S3_BUCKET_IMAGES=${PROJECT:l}-${ENV:l}-images-bucket # lowercase project and env
 
-export USERPOOL_ID=us-east-1_tBBZkCDfG
-export APP_CLIENT_ID=2h9tgeepqoh3ae3hjqkkf2btte
+export USERPOOL_ID=us-east-1_LqZBLBRAs
+export APP_CLIENT_ID=4c1tjq9el7roqs8r0gf0brlne9
 # export APP_CLIENT_SECRET=157quigo4ns20j9kt02454efm6ob12tfun866du74pkagkkf7o8k
 
 aws --endpoint-url=$S3_HOST s3 mb s3://$S3_BUCKET_IMAGES &&

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, status
+from fastapi import APIRouter, HTTPException, Depends, Request, status, Form
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from .. import auth
 from . import crud, schemas
@@ -13,22 +13,22 @@ router = APIRouter(
 
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
+async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> dict:
     return auth.initiate_cognito_auth(username=form_data.username, password=form_data.password)
 
 
-@router.post("/create")
-def create_user(user: schemas.UserCreate) -> schemas.User:
-    if crud.get_user_by_email(email=user.email):
+@router.post("/signup")
+def signup(username: str = Form(...), password: str = Form(...), confirmPassword: str = Form(...)) -> schemas.User:
+    if crud.get_user_by_email(email=username):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     try:
-        cognito_id = auth.create_cognito_user(username=user.email, password=user.password)
+        cognito_id = auth.create_cognito_user(username=username, password=password)
     except Exception as error:
         raise HTTPException(status_code=504, detail=str(error), headers={"X-Error": str(error)})
 
     try:
-        return crud.create_db_user(user=user, cognito_id=cognito_id)
+        return crud.create_db_user(user=schemas.UserCreate(email=username, password=password), cognito_id=cognito_id)
     except Exception as error:
         raise HTTPException(status_code=504, detail=str(error), headers={"X-Error": str(error)})
 
@@ -59,6 +59,6 @@ async def check_user_auth() -> dict[str, str]:
     return {"authorized": "true"}
 
 
-@router.get("/admin-auth") 
-async def check_admin_auth(claims: dict = Depends(auth.admin)) -> dict:
+@router.get("/check-claim") 
+async def check_claim(claims: dict = Depends(auth.user)) -> dict:
     return claims
