@@ -30,8 +30,10 @@ def handler(event: dict, context: LambdaContext) -> dict:
         logger.exception(f"Couldn't add connection_id: {connection_id} for channel_id: {channel_id}")
         return {'statusCode': 503, 'body': 'Failed to connect : '}
     
-    send_welcome_message(channel_id=channel_id, connection_id=connection_id, event=event)
-    send_message_history(channel_id=channel_id, event=event)
+    # send_welcome_message(channel_id=channel_id, connection_id=connection_id, event=event)
+
+    if channel_id != '0':
+        send_message_history(channel_id=channel_id, event=event)
 
     return {'statusCode': 200, 'body': 'Connected'}
 
@@ -59,7 +61,7 @@ def send_welcome_message(channel_id: str, connection_id: str, event: dict):
 def send_message_history(channel_id: str, event: dict):
     try:
         response = messages_table.query(KeyConditionExpression=Key('channel').eq(channel_id))
-        # logger.info(f"Query response: {response['Items']}")
+        logger.info(f"Query response: {response['Items']}")
     except ClientError:
         logger.exception("Couldn not query messeges table")
         raise ClientError

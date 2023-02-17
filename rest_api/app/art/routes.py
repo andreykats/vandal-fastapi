@@ -18,11 +18,11 @@ router = APIRouter(
 
 
 @router.post("/create", dependencies=[Depends(auth.admin)])
-async def create_layers(body: list[schemas.LayerCreate]) -> list[schemas.Layer]:
+def create_layers(body: list[schemas.LayerCreate]) -> list[schemas.Layer]:
     try:
         layer_list = []
         for layer in body:
-            model = await crud.create_layer(layer)
+            model = crud.create_layer(layer)
             layer_list.append(schemas.Layer(**model.attribute_values))
         return layer_list
     except Exception as error:
@@ -41,7 +41,7 @@ async def submit_new_layer(
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
-        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
+        new_layer = crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error), "X-Error-Name": "create_layer"})
 
@@ -75,7 +75,7 @@ async def upload_base_layer(
     image_file: UploadFile = File(...)) -> schemas.Layer:
 
     try:
-        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
+        new_layer = crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
@@ -93,7 +93,7 @@ async def upload_base_layer(
     return schemas.Layer(**new_layer.attribute_values)
 
 
-@router.post("/activate", dependencies=[Depends(auth.admin)])
+@router.post("/activate", dependencies=[Depends(auth.user)])
 async def set_artwork_active(
     layer_id: str = Form(...), 
     is_active: bool = Form(...)) -> schemas.Artwork:
