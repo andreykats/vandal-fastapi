@@ -65,7 +65,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
             body["action"] = "sendmessage"
             body["payload"] = {}
             body["payload"]["channel"] = channel_id
-            body["payload"]["message"] = message["body"]
+            body["payload"]["message"] = eval(message["body"])
 
             try:
                 client.post_to_connection(ConnectionId=connection_id, Data=json.dumps(body))

@@ -41,3 +41,11 @@ Outputs:
   RestApiUrl:
     Description: REST API URL
     Value: !GetAtt RestApi.Outputs.ApiUrl
+
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !GetAtt RestApi.Outputs.CognitoUserPoolId
+
+  CognitoAppClientId:
+    Description: Cognito App Client ID
+    Value: !GetAtt RestApi.Outputs.CognitoAppClientId

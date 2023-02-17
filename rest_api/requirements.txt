@@ -6,3 +6,4 @@ python-multipart==0.0.5
 aws-lambda-powertools==2.7.0
 websocket-client==1.5.0
 python-dotenv==0.21.1
+fastapi-cloudauth==0.4.3

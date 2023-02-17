@@ -40,7 +40,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         logger.exception("Missing channel")
         return {'statusCode': 400, 'body': 'Missing channel'}
 
-    message = body.get('payload', {}).get('message')
+    message: str = body.get('payload', {}).get('message')
     if not message:
         logger.exception("Missing message")
         return {'statusCode': 400, 'body': 'Missing message'}
@@ -84,7 +84,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         item = {
             "id": str(uuid4()),
             'channel': channel_id, 
-            'body': message, 
+            'body': str(message), 
             'created_at': datetime.now().isoformat()
         }
 

@@ -4,7 +4,7 @@ from pynamodb.exceptions import DoesNotExist, DeleteError, GetError, ScanError, 
 from . import crud_ddb as crud, files, schemas
 from ..utility import generate_unique_id
 from ..live import crud as live_crud, websockets
-
+from .. import auth
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,19 +17,19 @@ router = APIRouter(
 )
 
 
-@router.post("/create")
-async def create_layers(body: list[schemas.LayerCreate]) -> list[schemas.Layer]:
+@router.post("/create", dependencies=[Depends(auth.admin)])
+def create_layers(body: list[schemas.LayerCreate]) -> list[schemas.Layer]:
     try:
         layer_list = []
         for layer in body:
-            model = await crud.create_layer(layer)
+            model = crud.create_layer(layer)
             layer_list.append(schemas.Layer(**model.attribute_values))
         return layer_list
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.post("/submit")
+@router.post("/submit", dependencies=[Depends(auth.user)])
 async def submit_new_layer(
     layer_id: str = Form(...), 
     user_id: str = Form(...), 
@@ -41,7 +41,7 @@ async def submit_new_layer(
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
-        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
+        new_layer = crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error), "X-Error-Name": "create_layer"})
 
@@ -65,7 +65,7 @@ async def submit_new_layer(
     return artwork
 
 
-@router.post("/upload")
+@router.post("/upload", dependencies=[Depends(auth.admin)])
 async def upload_base_layer(
     art_name: str = Form(...), 
     artist_name: str = Form(...), 
@@ -75,7 +75,7 @@ async def upload_base_layer(
     image_file: UploadFile = File(...)) -> schemas.Layer:
 
     try:
-        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
+        new_layer = crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
@@ -93,7 +93,7 @@ async def upload_base_layer(
     return schemas.Layer(**new_layer.attribute_values)
 
 
-@router.post("/activate")
+@router.post("/activate", dependencies=[Depends(auth.user)])
 async def set_artwork_active(
     layer_id: str = Form(...), 
     is_active: bool = Form(...)) -> schemas.Artwork:
@@ -167,7 +167,7 @@ async def get_artwork_history(layer_id: str) -> list[schemas.Artwork]:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
 
-@router.delete("/delete/{layer_id}")
+@router.delete("/delete/{layer_id}", dependencies=[Depends(auth.admin)])
 async def delete_created_content(layer_id: str) -> schemas.Layer:
     try:
         layer = await crud.delete_layer(layer_id=layer_id)

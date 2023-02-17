@@ -5,19 +5,5 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.linting.enabled": true,
-    "serverlessConsole.services": [
-        {
-            "type": "cloudformation",
-            "title": "WebSocket",
-            "timeOffsetInMs": 0,
-            "awsProfile": "andrey_kats",
-            "stacks": [
-                {
-                    "region": "us-east-1",
-                    "stackName": "VANDAL-Stage-ApiStack-WebSocketApi-AHU56G4F4OGK",
-                    "stage": "dev"
-                }
-            ]
-        }
-    ]
+    "serverlessConsole.services": []
 }
