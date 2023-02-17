@@ -11,7 +11,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-# images/
+images/
 eggs/
 .eggs/
 lib/
@@ -25,12 +25,21 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.venv/
+
+# cache
 .pytest_cache/
-.vscode/
+.mypy_cache/
 
 # Database
-# *.db
+*.db
 
 # misc
 .DS_Store
+
+# local environments
+.venv/
+.vscode/
+.aws-sam/
+
+# environment variables
+.env

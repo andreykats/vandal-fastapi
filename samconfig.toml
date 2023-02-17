@@ -1,0 +1,22 @@
+version = 0.1
+# [default.global.parameters]
+
+[default.deploy.parameters]
+stack_name = "VANDAL-Stage-ApiStack"
+s3_bucket = "vandal-stage-api-bucket"
+s3_prefix = "sam-cli-store"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = false
+image_repositories = []
+
+[default.build.parameters]
+container_env_var = [
+    "Function1.GITHUB_TOKEN=TOKEN1",
+    "Function2.GITHUB_TOKEN=TOKEN2",
+]
+container_env_var_file = "env.json"
+no_beta_features = true
+
+# [production.deploy]
+# [production.deploy.parameters]

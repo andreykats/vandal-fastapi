@@ -1,0 +1,110 @@
+# https://github.com/deltamod3/sam-fastapi/blob/main/template.yml
+# https://github.com/ganshan/sam-dynamodb-local/blob/master/template.yml
+# https://github.com/iwpnd/fastapi-aws-lambda-example/blob/master/template.yml
+# https://gist.github.com/ryan-blunden/a4e7c2e6b0c13e6af9f2d88d4e5a9375
+# https://github.com/serverless-projects/aws-sam-examples
+# https://github.com/aws-samples/sam-accelerate-nested-stacks-demo
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Vandal API Service
+
+Globals:
+  Function:
+    Runtime: python3.9
+    Timeout: 300
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: fastapi
+      Description: FastAPI process in AWS Lamda
+      MemorySize: 128
+      CodeUri: ./app
+      Handler: src.main.handler
+      Policies: AmazonDynamoDBFullAccess
+      Environment:
+        Variables:
+          ENV: dev
+          DB_HOST: "http://docker.for.mac.localhost:8000/"
+          DB_TABLE_LAYERS: layer-table
+          DB_TABLE_MESSAGES: websocket-history-table
+          S3_HOST: "http://localhost.localstack.cloud:4566"
+          S3_BUCKET_IMAGES: vandal-images-bucket-stage
+      Events:
+        DefaultEndpoint:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Path: /{proxy+}
+            Method: ANY
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref ENV
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+  LayerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DB_TABLE_LAYERS
+      AttributeDefinitions:
+        - AttributeName: created_at
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: layer_type
+          AttributeType: S
+        - AttributeName: base_layer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      GlobalSecondaryIndexes:
+        - IndexName: layer_type_index
+          KeySchema:
+            - AttributeName: layer_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+        - IndexName: base_layer_id_index
+          KeySchema:
+            - AttributeName: base_layer_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  MessageTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DB_TABLE_MESSAGES
+      AttributeDefinitions:
+        - AttributeName: channel
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: channel
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1

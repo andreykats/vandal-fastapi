@@ -1,0 +1,430 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Vandal API Service
+
+Parameters:
+  ENV:
+    Type: String
+    Default: "stage"
+
+  TABLELAYERS:
+    Type: String
+    Default: "layer-table"
+
+  TABLEMESSAGES:
+    Type: String
+    Default: "websocket-history-table"
+
+  BUCKETIMAGES:
+    Type: String
+    Default: "vandal-images-bucket-stage"
+
+  TableName:
+    Type: String
+    Default: "simplechat_connections"
+    Description: (Required) The name of the new DynamoDB to store connection identifiers for each connected clients. Minimum 3 characters
+    MinLength: 3
+    MaxLength: 50
+    AllowedPattern: ^[A-Za-z_]+$
+    ConstraintDescription: "Required. Can be characters and underscore only. No numbers or special characters allowed."
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: fastapi
+      Description: FastAPI process in AWS Lamda
+      MemorySize: 128
+      CodeUri: ./app
+      Handler: src.main.handler
+      Runtime: python3.9
+      Timeout: 300
+      # Policies: AmazonDynamoDBFullAccess
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLELAYERS
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
+      Environment:
+        Variables:
+          ENV: !Ref ENV
+          DB_TABLE_LAYERS: !Ref TABLELAYERS
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+          S3_BUCKET_IMAGES: !Ref BUCKETIMAGES
+      Events:
+        DefaultEndpoint:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Path: /{proxy+}
+            Method: ANY
+
+  OnConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: OnConnectFunction
+      CodeUri: websockets/
+      Handler: on_connect.handler
+      MemorySize: 128
+      Runtime: python3.9
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SimpleChatWebSocket}/*"
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource:
+                - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:BulkSendMessageFunction"
+
+  OnConnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - SimpleChatWebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref OnConnectFunction
+      Principal: apigateway.amazonaws.com
+
+  OnDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: OnDisconnectFunction
+      CodeUri: websockets/
+      Handler: on_disconnect.handler
+      MemorySize: 128
+      Runtime: python3.9
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+
+  OnDisconnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - SimpleChatWebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref OnDisconnectFunction
+      Principal: apigateway.amazonaws.com
+
+  SendMessageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SendMessageFunction
+      CodeUri: websockets/
+      Handler: send_message.handler
+      MemorySize: 128
+      Runtime: python3.9
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SimpleChatWebSocket}/*"
+
+  SendMessagePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - SimpleChatWebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SendMessageFunction
+      Principal: apigateway.amazonaws.com
+
+  BulkSendMessageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: BulkSendMessageFunction
+      CodeUri: websockets/
+      Handler: send_bulk_message.handler
+      MemorySize: 128
+      Runtime: python3.9
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SimpleChatWebSocket}/*"
+
+  BulkSendMessagePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - SimpleChatWebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref BulkSendMessageFunction
+      Principal: apigateway.amazonaws.com
+
+  LayerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TABLELAYERS
+      AttributeDefinitions:
+        - AttributeName: created_at
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: layer_type
+          AttributeType: S
+        - AttributeName: base_layer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      # BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      GlobalSecondaryIndexes:
+        - IndexName: layer_type_index
+          KeySchema:
+            - AttributeName: layer_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+        - IndexName: base_layer_id_index
+          KeySchema:
+            - AttributeName: base_layer_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  MessageTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TABLEMESSAGES
+      AttributeDefinitions:
+        - AttributeName: channel
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: channel
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      # BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  ConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      AttributeDefinitions:
+        - AttributeName: connection_id
+          AttributeType: S
+        - AttributeName: channel_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connection_id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: True
+      GlobalSecondaryIndexes:
+        - IndexName: channel_id_index
+          KeySchema:
+            - AttributeName: channel_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  SimpleChatWebSocket:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: SimpleChatWebSocket
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.action"
+
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+      RouteKey: $connect
+      AuthorizationType: NONE
+      OperationName: ConnectRoute
+      Target: !Join
+        - "/"
+        - - "integrations"
+          - !Ref ConnectInteg
+
+  ConnectInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+      Description: Connect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnConnectFunction.Arn}/invocations
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+      RouteKey: $disconnect
+      AuthorizationType: NONE
+      OperationName: DisconnectRoute
+      Target: !Join
+        - "/"
+        - - "integrations"
+          - !Ref DisconnectInteg
+
+  DisconnectInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+      Description: Disconnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnDisconnectFunction.Arn}/invocations
+
+  SendRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+      RouteKey: sendmessage
+      AuthorizationType: NONE
+      OperationName: SendRoute
+      Target: !Join
+        - "/"
+        - - "integrations"
+          - !Ref SendInteg
+
+  SendInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+      Description: Send Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendMessageFunction.Arn}/invocations
+
+  # BulkSendRoute:
+  #   Type: AWS::ApiGatewayV2::Route
+  #   Properties:
+  #     ApiId: !Ref SimpleChatWebSocket
+  #     RouteKey: bulksendmessage
+  #     AuthorizationType: NONE
+  #     OperationName: BulkSendRoute
+  #     Target: !Join
+  #       - "/"
+  #       - - "integrations"
+  #         - !Ref BulkSendInteg
+
+  # BulkSendInteg:
+  #   Type: AWS::ApiGatewayV2::Integration
+  #   Properties:
+  #     ApiId: !Ref SimpleChatWebSocket
+  #     Description: Bulk Send Integration
+  #     IntegrationType: AWS_PROXY
+  #     IntegrationUri:
+  #       Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BulkSendMessageFunction.Arn}/invocations
+
+  Deployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - ConnectRoute
+      - SendRoute
+      - DisconnectRoute
+    Properties:
+      ApiId: !Ref SimpleChatWebSocket
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: Prod
+      Description: Prod Stage
+      DeploymentId: !Ref Deployment
+      ApiId: !Ref SimpleChatWebSocket
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: fastapi
+      StageName: !Ref ENV
+
+Outputs:
+  ApiUrl:
+    Description: URL of the API
+    Value:
+      Fn::Sub: "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ENV}"
+
+  ConnectionsTableArn:
+    Description: "Connections table ARN"
+    Value: !GetAtt ConnectionsTable.Arn
+
+  OnConnectFunctionArn:
+    Description: "OnConnect function ARN"
+    Value: !GetAtt OnConnectFunction.Arn
+
+  OnDisconnectFunctionArn:
+    Description: "OnDisconnect function ARN"
+    Value: !GetAtt OnDisconnectFunction.Arn
+
+  SendMessageFunctionArn:
+    Description: "SendMessage function ARN"
+    Value: !GetAtt SendMessageFunction.Arn
+
+  BulkSendMessageFunctionArn:
+    Description: "BulkSendMessage function ARN"
+    Value: !GetAtt BulkSendMessageFunction.Arn
+
+  WebSocketURI:
+    Description: "The WSS Protocol URI to connect to"
+    Value:
+      !Join [
+        "",
+        [
+          "wss://",
+          !Ref SimpleChatWebSocket,
+          ".execute-api.",
+          !Ref "AWS::Region",
+          ".amazonaws.com/",
+          !Ref "Stage",
+        ],
+      ]

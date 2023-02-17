@@ -1,0 +1,323 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Websocket API for Vandal
+
+Parameters:
+  PROJECT:
+    Type: String
+    Default: VANDAL
+
+  ENV:
+    Type: String
+    AllowedValues:
+      - Dev
+      - Stage
+      - Prod
+
+  TABLEMESSAGES:
+    Type: String
+
+  TABLECONNECTIONS:
+    Type: String
+
+Globals:
+  Function:
+    Runtime: python3.9
+    MemorySize: 128
+    Timeout: 300
+    CodeUri: .
+
+Resources:
+  onConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${PROJECT}-${ENV}-onConnectFunction"
+      Description: WebSocket connect handler
+      Handler: app.on_connect.handler
+      Environment:
+        Variables:
+          DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLECONNECTIONS
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource:
+                - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${bulkSendMessageFunction}"
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource:
+                - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${sendMessageFunction}"
+
+  onConnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - ApiGateway
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref onConnectFunction
+      Principal: apigateway.amazonaws.com
+
+  onDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${PROJECT}-${ENV}-onDisconnectFunction
+      Description: WebSocket disconnect handler
+      Handler: app.on_disconnect.handler
+      Environment:
+        Variables:
+          DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLECONNECTIONS
+
+  onDisconnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - ApiGateway
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref onDisconnectFunction
+      Principal: apigateway.amazonaws.com
+
+  sendMessageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${PROJECT}-${ENV}-sendMessageFunction
+      Description: WebSocket send message handler
+      Handler: app.send_message.handler
+      Environment:
+        Variables:
+          DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
+          DB_TABLE_MESSAGES: !Ref TABLEMESSAGES
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLECONNECTIONS
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLEMESSAGES
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
+
+  sendMessagePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - ApiGateway
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref sendMessageFunction
+      Principal: apigateway.amazonaws.com
+
+  bulkSendMessageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${PROJECT}-${ENV}-bulkSendMessageFunction
+      Description: WebSocket bulk send messages handler
+      Handler: app.send_bulk_message.handler
+      Environment:
+        Variables:
+          DB_TABLE_CONNECTIONS: !Ref TABLECONNECTIONS
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TABLECONNECTIONS
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "execute-api:ManageConnections"
+              Resource:
+                - !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*"
+
+  bulkSendMessagePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - ApiGateway
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref bulkSendMessageFunction
+      Principal: apigateway.amazonaws.com
+
+  WebSocketConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TABLECONNECTIONS
+      AttributeDefinitions:
+        - AttributeName: connection_id
+          AttributeType: S
+        - AttributeName: channel_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connection_id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: True
+      GlobalSecondaryIndexes:
+        - IndexName: channel_id_index
+          KeySchema:
+            - AttributeName: channel_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  MessageTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TABLEMESSAGES
+      AttributeDefinitions:
+        - AttributeName: channel
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: channel
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      # BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub ${PROJECT}-${ENV}-WebsocketApiGateway
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.action"
+
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: $connect
+      AuthorizationType: NONE
+      OperationName: ConnectRoute
+      Target: !Join
+        - "/"
+        - - "integrations"
+          - !Ref ConnectInteg
+
+  ConnectInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      Description: Connect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${onConnectFunction.Arn}/invocations
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: $disconnect
+      AuthorizationType: NONE
+      OperationName: DisconnectRoute
+      Target: !Join
+        - "/"
+        - - "integrations"
+          - !Ref DisconnectInteg
+
+  DisconnectInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      Description: Disconnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${onDisconnectFunction.Arn}/invocations
+
+  SendRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: sendmessage
+      AuthorizationType: NONE
+      OperationName: SendRoute
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref SendInteg
+
+  SendInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      Description: Send Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sendMessageFunction.Arn}/invocations
+
+  Deployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - ConnectRoute
+      - SendRoute
+      - DisconnectRoute
+    Properties:
+      ApiId: !Ref ApiGateway
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: !Ref ENV
+      Description: Stage
+      DeploymentId: !Ref Deployment
+      ApiId: !Ref ApiGateway
+
+Outputs:
+  WebSocketConnectionsTableArn:
+    Description: "WebSocket connections table ARN"
+    Value: !GetAtt WebSocketConnectionsTable.Arn
+
+  onConnectFunctionArn:
+    Description: "Websocket onConnect function ARN"
+    Value: !GetAtt onConnectFunction.Arn
+
+  onDisconnectFunctionArn:
+    Description: "Websocket onDisconnect function ARN"
+    Value: !GetAtt onDisconnectFunction.Arn
+
+  sendMessageFunctionArn:
+    Description: "Websocket sendMessage function ARN"
+    Value: !GetAtt sendMessageFunction.Arn
+
+  bulkSendMessageFunctionArn:
+    Description: "Websocket bulkSendMessage function ARN"
+    Value: !GetAtt bulkSendMessageFunction.Arn
+
+  WebSocketURI:
+    Description: "The WSS Protocol URI to connect to"
+    Value:
+      !Join [
+        "",
+        [
+          "wss://",
+          !Ref ApiGateway,
+          ".execute-api.",
+          !Ref "AWS::Region",
+          ".amazonaws.com/",
+          !Ref ENV,
+        ],
+      ]
+    Export:
+      Name: WebSocketURI
