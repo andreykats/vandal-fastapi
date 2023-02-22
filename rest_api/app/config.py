@@ -11,6 +11,16 @@ import typing
 class GlobalConfig(BaseSettings):
     ENV: typing.Optional[str] = environ.get('ENV')
 
+    # Set the root path for the environment
+    if "dev" in environ.get('ENV', "").lower():
+        ROOT_PATH = ""
+    elif "stage" in environ.get('ENV', "").lower():
+        ROOT_PATH = "/Stage"
+    elif "prod" in environ.get('ENV', "").lower():
+        ROOT_PATH = "/Prod"
+    else:
+        raise ValueError("ENV not set")
+
 # class GlobalDBCconfig(GlobalConfig):
     # SQLALCHEMY_DATABASE_URL = "sqlite:///./sqlite.db"
     # # SQLALCHEMY_DATABASE_URL = "postgresql://postgres:testing123@127.0.0.1:5432/vandal"

@@ -13,22 +13,9 @@ from .art import routes as art
 
 from mangum import Mangum
 from dotenv import load_dotenv
-from os import environ
-
-
 load_dotenv()
-# Set the root path for the environment
-if "dev" in environ.get('ENV', "").lower():
-    root_path = "/"
-elif "stage" in environ.get('ENV', "").lower():
-    root_path = "/Stage"
-elif "prod" in environ.get('ENV', "").lower():
-    root_path = "/Prod"
-else:
-    raise ValueError("ENV not set")
+from .config import config
 
-# print(f"Setting root_path to:  {root_path}")
-# logger.debug(f"Setting root_path to: {root_path}")
 
 # Create a FastAPI instance
 title = "VANDAL REST API"
@@ -39,7 +26,7 @@ api = FastAPI(
     title=title,
     description=description,
     version=fastapi_version,
-    root_path= root_path,
+    root_path= config.ROOT_PATH,
 )
 
 # Add CORS handling. For dev everything is set to open
