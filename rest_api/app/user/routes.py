@@ -28,6 +28,11 @@ def signup(username: str = Form(...), password: str = Form(...), confirmPassword
         raise HTTPException(status_code=504, detail=str(error), headers={"X-Error": str(error)})
 
     try:
+        auth.confirm_sign_up(username=username)
+    except Exception as error:
+        raise HTTPException(status_code=504, detail=str(error), headers={"X-Error": str(error)})
+
+    try:
         return crud.create_db_user(user=schemas.UserCreate(email=username, password=password), cognito_id=cognito_id)
     except Exception as error:
         raise HTTPException(status_code=504, detail=str(error), headers={"X-Error": str(error)})

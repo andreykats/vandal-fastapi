@@ -14,17 +14,17 @@ from jose import jwk, jwt
 from jose.utils import base64url_decode
 from jose.exceptions import JWTError
 import urllib.request
+from .config import config
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=config.ROOT_PATH + "/users/login")
 
 
 def get_secret_hash(username: str) -> str:
-    msg = username + config.APP_CLIENT_ID
-    dig = hmac.new(str(config.APP_CLIENT_SECRET).encode('utf-8'), 
-        msg = str(msg).encode('utf-8'), digestmod=hashlib.sha256).digest()
-    d2 = base64.b64encode(dig).decode()
-    return d2
+    key = str(config.APP_CLIENT_SECRET).encode('utf-8')
+    msg = str(username + config.APP_CLIENT_ID).encode('utf-8')
+    dig = hmac.new(key=key, msg=msg, digestmod=hashlib.sha256).digest()
+    return base64.b64encode(dig).decode()
 
 
 def initiate_cognito_auth(username: str, password: str) -> dict:
@@ -82,22 +82,17 @@ def create_cognito_user(username: str, password: str) -> str:
     return cognito_id
 
 
-def confirm_sign_up(username: str) -> str:
+def confirm_sign_up(username: str) -> bool:
     client = boto3.client("cognito-idp")
     try:
-        response = client.admin_confirm_sign_up(
+        client.admin_confirm_sign_up(
             UserPoolId=config.USERPOOL_ID,
             Username=username
         )
     except Exception as error:
         raise error
-
-    try:
-        cognito_id = response.get('UserSub')
-    except Exception as error:
-        raise error
     
-    return cognito_id
+    return True
 
 
 def download_public_keys():
