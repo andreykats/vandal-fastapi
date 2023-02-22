@@ -18,11 +18,11 @@ router = APIRouter(
 
 
 @router.post("/create", dependencies=[Depends(auth.admin)])
-def create_layers(body: list[schemas.LayerCreate]) -> list[schemas.Layer]:
+async def create_layers(body: list[schemas.LayerCreate]) -> list[schemas.Layer]:
     try:
         layer_list = []
         for layer in body:
-            model = crud.create_layer(layer)
+            model = await crud.create_layer(layer)
             layer_list.append(schemas.Layer(**model.attribute_values))
         return layer_list
     except Exception as error:
@@ -41,13 +41,12 @@ async def submit_new_layer(
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
     try:
-        new_layer = crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
+        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, base_layer_id=model.base_layer_id, width=model.width, height=model.height, art_name=model.art_name, artist_name=model.artist_name))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error), "X-Error-Name": "create_layer"})
 
     try:
         file_name = (new_layer.id + ".jpg").replace(" ", "_")
-        print(file_name)
         await files.save_image_data_to_s3(file_name=file_name, image_data=image_data)
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error), "X-Error-Name": "save_image_data"})
@@ -75,7 +74,7 @@ async def upload_base_layer(
     image_file: UploadFile = File(...)) -> schemas.Layer:
 
     try:
-        new_layer = crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
+        new_layer = await crud.create_layer(schemas.LayerCreate(owner_id=user_id, art_name=art_name, artist_name=artist_name, width=image_width, height=image_height))
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
 
@@ -93,6 +92,10 @@ async def upload_base_layer(
     return schemas.Layer(**new_layer.attribute_values)
 
 
+def detail(function: str, error: Exception):
+    return {"function": function, "error": str(error)}
+
+
 @router.post("/activate", dependencies=[Depends(auth.user)])
 async def set_artwork_active(
     layer_id: str = Form(...), 
@@ -101,23 +104,25 @@ async def set_artwork_active(
     try:
         model = await crud.set_layer_active(layer_id=layer_id, is_active=is_active)
     except Exception as error:
-        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
+        raise HTTPException(status_code=503, detail=detail("set_layer_active", error), headers={"X-Error": str(error)})
 
     try:
         artwork = await crud.get_artwork_from_layer(layer=model)
     except Exception as error:
-        raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
+        raise HTTPException(status_code=503, detail=detail("get_artwork_from_layer", error), headers={"X-Error": str(error)})
 
     if artwork.is_active == False:
         try:
             # Delete all messages from DynamoDB if artwork is being deactivated
-            await live_crud.delete_channel_history(artwork.id)
+            deleted = live_crud.delete_channel_history(artwork.id)
+            print(deleted)
         except Exception as error:
-            raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})
+            raise HTTPException(status_code=503, detail=detail("delete_channel_history", error), headers={"X-Error": str(error)})
 
     try:
         websockets.announce_reload()
     except Exception as error:
+        print(error)
         pass
 
     return artwork
