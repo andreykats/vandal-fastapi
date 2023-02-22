@@ -29,7 +29,7 @@ Resources:
         ENV: !Ref ENV
         TABLELAYERS: !Sub "${PROJECT}-${ENV}-ArtworkLayersTable"
         TABLEMESSAGES: !Sub "${PROJECT}-${ENV}-WebsocketMessagesTable"
-        BUCKETIMAGES: !Sub "${PROJECT}-${ENV}-images-bucket"
+        BUCKETIMAGES: !Sub "vandal-stage-images-bucket"
         WEBSOCKETURI: !GetAtt WebSocketApi.Outputs.WebSocketURI
     DependsOn: WebSocketApi
 

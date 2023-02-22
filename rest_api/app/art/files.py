@@ -32,9 +32,12 @@ async def save_image_data_to_s3(file_name: str, image_data: str) -> str:
     #         await save_image_data_to_disk(file_name, image_data)
     #     except:
     #         pass
-
+    
     # Create an S3 client
-    s3 = boto3.client('s3', endpoint_url=config.S3_HOST, aws_access_key_id=config.AWS_ACCESS_KEY_ID, aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY)
+    if config.ENV == "dev":
+        s3 = boto3.client('s3', endpoint_url=config.S3_HOST, aws_access_key_id=config.AWS_ACCESS_KEY_ID, aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY)
+    else:
+        s3 = boto3.client('s3')
 
     # Convert string to bytes
     bytes = str.encode(image_data)
@@ -44,7 +47,7 @@ async def save_image_data_to_s3(file_name: str, image_data: str) -> str:
 
     # Upload the file
     try:
-        response = s3.put_object(Body=base64_bytes, Bucket=config.S3_BUCKET_IMAGES, Key=file_name, ContentType='image/jpeg')
+        response = s3.put_object(Body=base64_bytes, Bucket=config.S3_BUCKET_IMAGES.lower(), Key=file_name, ContentType='image/jpeg')
         return response
     except ClientError as error:
         raise error
@@ -58,11 +61,14 @@ async def save_image_file_to_s3(file_name: str, image_file: typing.BinaryIO) -> 
         except:
             pass
 
-    s3 = boto3.client('s3', endpoint_url=config.S3_HOST, aws_access_key_id=config.AWS_ACCESS_KEY_ID, aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY)
+    if config.ENV == "dev":
+        s3 = boto3.client('s3', endpoint_url=config.S3_HOST, aws_access_key_id=config.AWS_ACCESS_KEY_ID, aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY)
+    else:
+        s3 = boto3.client('s3')
 
     try:
         # response = s3.upload_file(image_file, config.S3_BUCKET_IMAGES, file_name)
-        response = s3.upload_file(file_name=image_file, Bucket=config.S3_BUCKET_IMAGES, Key=file_name, ExtraArgs={'ContentType': 'image/jpeg'})
+        response = s3.upload_file(file_name=image_file, Bucket=config.S3_BUCKET_IMAGES.lower(), Key=file_name, ExtraArgs={'ContentType': 'image/jpeg'})
         return response
     except ClientError as error:
         raise error
