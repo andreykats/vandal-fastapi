@@ -177,7 +177,6 @@ async def get_latest_artworks() -> list[schemas.Artwork]:
         # Create artwork from base layer and (sorted) layer list then append to artwork list
         artwork_list.append(schemas.Artwork(layers=sorted_layer_list, **sorted_layer_list[0].dict()))
 
-    print(len(artwork_list))
     return artwork_list
 
 

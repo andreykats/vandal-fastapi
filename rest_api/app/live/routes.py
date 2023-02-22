@@ -46,7 +46,7 @@ async def get_messages(channel: str) -> list[schemas.Message]:
 @router.delete("/delete/{channel}", dependencies=[Depends(auth.admin)])
 async def delete_channel_content(channel: str):
     try:
-        result = await crud.delete_channel_history(channel=channel)
+        result = crud.delete_channel_history(channel=channel)
         return result
     except Exception as error:
         raise HTTPException(status_code=503, detail=str(error), headers={"X-Error": str(error)})

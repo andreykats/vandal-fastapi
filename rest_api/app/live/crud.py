@@ -37,7 +37,7 @@ async def create_message(message: schemas.MessageCreate) -> models.MessageTable:
         raise error
 
 
-async def delete_channel_history(channel: str) -> dict:
+def delete_channel_history(channel: str) -> dict:
     try:
         result = models.MessageTable.query(channel)
     except Exception as error:
