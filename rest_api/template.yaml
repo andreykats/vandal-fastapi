@@ -29,7 +29,7 @@ Parameters:
 
   BUCKETIMAGES:
     Type: String
-    Default: VANDAL-Stage-images-bucket
+    Default: vandal-stage-images-bucket
 
   WEBSOCKETURI:
     Type: String
@@ -57,6 +57,23 @@ Resources:
             TableName: !Ref TABLEMESSAGES
         - DynamoDBCrudPolicy:
             TableName: !Ref TABLEUSERS
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "cognito-idp:AdminInitiateAuth"
+              Resource:
+                - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}"
+            - Effect: Allow
+              Action:
+                - "cognito-idp:AdminConfirmSignUp"
+              Resource:
+                - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}"
+            - Effect: Allow
+              Action:
+                - "s3:*"
+              Resource:
+                - !Sub "arn:aws:s3:::${BUCKETIMAGES}"
+                - !Sub "arn:aws:s3:::${BUCKETIMAGES}/*"
       Environment:
         Variables:
           ENV: !Ref ENV
