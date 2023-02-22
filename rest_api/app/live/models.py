@@ -20,7 +20,8 @@ class MessageTable(BaseTable):
     id = UnicodeAttribute()
     channel = UnicodeAttribute(hash_key=True)
     body = UnicodeAttribute()
-    created_at = UTCDateTimeAttribute(range_key=True)
+    # created_at = UTCDateTimeAttribute(range_key=True)
+    created_at = UnicodeAttribute(range_key=True)
 
 
 # Create the table
